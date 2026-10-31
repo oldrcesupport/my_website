@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-vazirmatn), "Vazirmatn", "Vazir", Tahoma, system-ui, -apple-system, sans-serif;
+  --color-warm-bg: #F5F0E7;
+  --color-warm-surface: #FFFCF6;
+  --color-warm-elevated: #FFFFFF;
+  --color-forest: #203D33;
+  --color-forest-hover: #294D40;
+  --color-forest-subtle: #EDF3F0;
+  --color-brass: #C3A16A;
+  --color-brass-subtle: #F6EFE3;
+  --color-terracotta: #A85E48;
+  --color-terracotta-subtle: #FDF1EE;
+  --color-border-warm: #E6DED1;
+  --color-night: #202823;
+}
+
+:root {
+  --bg-warm: #F5F0E7;
+  --surface-warm: #FFFCF6;
+  --surface-elevated: #FFFFFF;
+  --primary-forest: #203D33;
+  --primary-forest-hover: #294D40;
+  --primary-forest-subtle: #EDF3F0;
+  --text-primary: #262A25;
+  --text-muted: #77756D;
+  --accent-brass: #C3A16A;
+  --accent-brass-subtle: #F6EFE3;
+  --accent-terracotta: #A85E48;
+  --accent-terracotta-subtle: #FDF1EE;
+  --border-warm: #E6DED1;
+  --night-accent: #202823;
+}
+
+body {
+  background-color: var(--bg-warm);
+  color: var(--text-primary);
+  font-family: var(--font-vazirmatn), "Vazirmatn", "Vazir", Tahoma, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  direction: rtl;
+  text-align: right;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Utilities for Premium Editorial Hospitality Feel */
+.bg-warm { background-color: var(--bg-warm); }
+.bg-surface { background-color: var(--surface-warm); }
+.bg-surface-elevated { background-color: var(--surface-elevated); }
+.bg-forest { background-color: var(--primary-forest); }
+.bg-forest-hover:hover { background-color: var(--primary-forest-hover); }
+.bg-forest-subtle { background-color: var(--primary-forest-subtle); }
+.bg-brass { background-color: var(--accent-brass); }
+.bg-brass-subtle { background-color: var(--accent-brass-subtle); }
+.bg-terracotta { background-color: var(--accent-terracotta); }
+.bg-terracotta-subtle { background-color: var(--accent-terracotta-subtle); }
+.bg-night { background-color: var(--night-accent); }
+
+.text-main { color: var(--text-primary); }
+.text-muted-warm { color: var(--text-muted); }
+.text-forest { color: var(--primary-forest); }
+.text-brass { color: var(--accent-brass); }
+.text-terracotta { color: var(--accent-terracotta); }
+
+.border-warm { border-color: var(--border-warm); }
+.border-forest { border-color: var(--primary-forest); }
+.border-brass { border-color: var(--accent-brass); }
+
+/* Print styling for digital tickets */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .ticket-card {
+    border: 1px solid #CCC !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
