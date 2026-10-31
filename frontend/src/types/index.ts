@@ -123,7 +123,16 @@ export interface DashboardStats {
 }
 
 export interface CheckInScanResult {
-  result: "SUCCESS" | "ALREADY_USED" | "EXPIRED" | "CANCELLED" | "ORDER_UNPAID" | "INVALID_TOKEN";
+  result:
+    | "SUCCESS"
+    | "ALREADY_USED"
+    | "EXPIRED"
+    | "CANCELLED"
+    | "ORDER_UNPAID"
+    | "INVALID_TOKEN"
+    | "NETWORK_ERROR"
+    | "SERVER_ERROR"
+    | "AUTH_ERROR";
   message: string;
   ticket_number?: string;
   scanned_at?: string;

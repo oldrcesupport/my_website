@@ -11,10 +11,13 @@ const nextConfig = {
   outputFileTracingRoot: __dirname,
   allowedDevOrigins: [
     "localhost:3000",
+    "localhost",
     "127.0.0.1:3000",
+    "127.0.0.1",
     "192.168.1.101:3000",
     "192.168.1.101",
     "0.0.0.0:3000",
+    "0.0.0.0",
   ],
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8000";

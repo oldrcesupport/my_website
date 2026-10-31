@@ -41,33 +41,11 @@ export default function TicketPassesPage({ params }: PageProps) {
       if ((document.hidden && !showLoader) || (stopPollingRef.current && !showLoader)) return;
       if (showLoader) setLoading(true);
 
-      const searchParams =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search)
-          : null;
-      const urlToken = searchParams?.get("token") || "";
-      const storedToken =
-        typeof window !== "undefined"
-          ? localStorage.getItem(`token_${orderId}`) ||
-            localStorage.getItem("last_guest_token") ||
-            ""
-          : "";
-      const effectiveToken = urlToken || storedToken;
-
-      if (urlToken && typeof window !== "undefined") {
-        localStorage.setItem(`token_${orderId}`, urlToken);
-        localStorage.setItem("last_guest_token", urlToken);
-      }
-
       try {
-        const res = await api.getOrderTickets(orderId, effectiveToken);
+        // Authenticated via secure HttpOnly cookie sent automatically with credentials: include
+        const res = await api.getOrderTickets(orderId);
         setData(res);
         setError("");
-
-        if (res.guest_access_token && typeof window !== "undefined") {
-          localStorage.setItem(`token_${orderId}`, res.guest_access_token);
-          localStorage.setItem("last_guest_token", res.guest_access_token);
-        }
 
         // Check if all tickets have reached terminal state (all used or expired)
         if (res.tickets && res.tickets.length > 0) {

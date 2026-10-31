@@ -30,13 +30,15 @@ class OrderTicketsView(APIView):
                 {"error": "سفارش یافت نشد."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Access check: strictly enforce authenticated staff/admin or valid guest bearer token
-        is_staff_admin = (
+        # Access check: strictly enforce authenticated admin (Super Admin / Admin) or valid guest bearer token
+        # Note: Scanner staff (STAFF_SCANNER) do NOT have access to customer tickets
+        profile = getattr(request.user, "staff_profile", None)
+        is_admin_user = (
             request.user
             and request.user.is_authenticated
-            and (request.user.is_staff or request.user.is_superuser)
+            and (request.user.is_superuser or (profile and profile.is_admin))
         )
-        if not is_staff_admin:
+        if not is_admin_user:
             token = extract_guest_token(request, public_id=order.public_id)
             if not token or not order.verify_access_token(token):
                 return Response(
@@ -77,12 +79,13 @@ class TicketQrImageView(APIView):
                 {"error": "بلیت یافت نشد."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        is_staff_admin = (
+        profile = getattr(request.user, "staff_profile", None)
+        is_admin_user = (
             request.user
             and request.user.is_authenticated
-            and (request.user.is_staff or request.user.is_superuser)
+            and (request.user.is_superuser or (profile and profile.is_admin))
         )
-        if not is_staff_admin:
+        if not is_admin_user:
             token = extract_guest_token(request, public_id=ticket.order.public_id)
             if not token or not ticket.order.verify_access_token(token):
                 return Response(

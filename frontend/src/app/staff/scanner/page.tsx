@@ -217,28 +217,50 @@ export default function StaffScannerPage() {
       playAudioFeedback(true);
       loadHistory(token);
     } catch (err: any) {
-      // Determine HTTP status and detail
-      let resPayload: CheckInScanResult = {
-        result: "INVALID_TOKEN",
-        message: err.message || "خطای اعتبارسنجی بلیت",
-      };
+      let resPayload: CheckInScanResult;
 
-      if (err.status === 409) {
+      if (!err.status || err.name === "TypeError" || err.message?.includes("fetch") || err.message?.includes("network")) {
+        // Network connection error / offline
+        resPayload = {
+          result: "NETWORK_ERROR",
+          message: "خطای اتصال شبکه یا قطعی اینترنت. لطفاً اتصال شبکه را بررسی فرمایید (بارکد نامعتبر نیست).",
+        };
+      } else if (err.status >= 500) {
+        // Server infrastructure error
+        resPayload = {
+          result: "SERVER_ERROR",
+          message: "خطای موقت در سرور پذیرش (۵۰۰). لطفاً مجدداً تلاش نمایید (بارکد نامعتبر نیست).",
+        };
+      } else if (err.status === 401 || err.status === 403) {
+        // Auth failure
+        resPayload = {
+          result: "AUTH_ERROR",
+          message: "نشست پرسنلی منقضی شده یا دسترسی مجاز نیست. لطفاً مجدداً وارد حساب کاربری شوید.",
+        };
+      } else if (err.status === 409) {
         resPayload = {
           result: "ALREADY_USED",
-          message: err.message || "این بلیت قبلاً استفاده شده است.",
+          message: err.message || "این بلیت قبلاً پذیرش شده و قابل استفاده مجدد نیست.",
         };
       } else if (err.status === 404) {
         resPayload = {
           result: "INVALID_TOKEN",
-          message: "بارکد اسکن‌شده در سامانه یافت نشد.",
+          message: "بارکد اسکن‌شده در سامانه یافت نشد و نامعتبر است.",
         };
       } else if (err.status === 400) {
+        const msg = String(err.message || "");
+        const resultType = msg.includes("منقضی") ? "EXPIRED" : msg.includes("لغو") ? "CANCELLED" : "ORDER_UNPAID";
         resPayload = {
-          result: "EXPIRED",
-          message: err.message || "بلیت منقضی شده یا نامعتبر است.",
+          result: resultType,
+          message: msg || "بلیت منقضی شده یا وضعیت سفارش پرداخت‌نشده است.",
+        };
+      } else {
+        resPayload = {
+          result: "INVALID_TOKEN",
+          message: err.message || "خطای اعتبارسنجی بلیت",
         };
       }
+
       setScanResult(resPayload);
       playAudioFeedback(false);
       loadHistory(token);
@@ -363,15 +385,24 @@ export default function StaffScannerPage() {
                 ? "bg-[#203D33] text-[#FFFCF6] border-[#203D33]"
                 : scanResult.result === "ALREADY_USED"
                 ? "bg-[#A85E48] text-[#FFFCF6] border-[#A85E48]"
+                : scanResult.result === "NETWORK_ERROR" || scanResult.result === "SERVER_ERROR"
+                ? "bg-[#8A5B20] text-[#FFFCF6] border-[#8A5B20]"
+                : scanResult.result === "AUTH_ERROR"
+                ? "bg-[#6B21A8] text-[#FFFCF6] border-[#6B21A8]"
                 : "bg-[#77756D] text-[#FFFCF6] border-[#77756D]"
             }`}
           >
             <div className="w-14 h-14 rounded-full bg-[#FFFCF6]/20 mx-auto flex items-center justify-center">
               {scanResult.result === "SUCCESS" && <CheckCircle2 className="w-8 h-8 text-[#C3A16A]" />}
               {scanResult.result === "ALREADY_USED" && <AlertTriangle className="w-8 h-8 text-[#FFFCF6]" />}
-              {scanResult.result !== "SUCCESS" && scanResult.result !== "ALREADY_USED" && (
-                <XCircle className="w-8 h-8 text-[#FFFCF6]" />
+              {(scanResult.result === "NETWORK_ERROR" || scanResult.result === "SERVER_ERROR" || scanResult.result === "AUTH_ERROR") && (
+                <AlertTriangle className="w-8 h-8 text-[#FFFCF6]" />
               )}
+              {scanResult.result !== "SUCCESS" &&
+                scanResult.result !== "ALREADY_USED" &&
+                scanResult.result !== "NETWORK_ERROR" &&
+                scanResult.result !== "SERVER_ERROR" &&
+                scanResult.result !== "AUTH_ERROR" && <XCircle className="w-8 h-8 text-[#FFFCF6]" />}
             </div>
 
             <h2 className="text-xl font-bold">
@@ -380,7 +411,10 @@ export default function StaffScannerPage() {
               {scanResult.result === "EXPIRED" && "بلیت منقضی شده است"}
               {scanResult.result === "CANCELLED" && "بلیت باطل و لغو شده است"}
               {scanResult.result === "INVALID_TOKEN" && "بارکد نامعتبر است"}
-              {scanResult.result === "ORDER_UNPAID" && "سفارش پرداخت‌نشده"}
+              {scanResult.result === "ORDER_UNPAID" && "سفارش پرداخت‌نشده است"}
+              {scanResult.result === "NETWORK_ERROR" && "خطای ارتباط شبکه یا آفلاین"}
+              {scanResult.result === "SERVER_ERROR" && "خطای موقت در سرور پذیرش"}
+              {scanResult.result === "AUTH_ERROR" && "خطای احراز هویت پرسنل"}
             </h2>
 
             <p className="text-sm text-[#FFFCF6]/90 leading-relaxed max-w-sm mx-auto">

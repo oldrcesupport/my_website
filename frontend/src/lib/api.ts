@@ -19,6 +19,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   const res = await fetch(url, {
+    credentials: "include",
     ...options,
     headers,
   });
@@ -73,13 +74,13 @@ export const api = {
     }),
 
   getOrderStatus: (publicId: string, guestToken?: string) =>
-    request<OrderStatusResponse>(`/api/v1/orders/${publicId}/status/${guestToken ? `?token=${encodeURIComponent(guestToken)}` : ""}`, {
-      headers: guestToken ? { Authorization: `Bearer ${guestToken}` } : {},
+    request<OrderStatusResponse>(`/api/v1/orders/${publicId}/status/`, {
+      headers: guestToken ? { "X-Guest-Token": guestToken } : {},
     }),
 
   getOrderTickets: (publicId: string, guestToken?: string) =>
-    request<OrderTicketsResponse>(`/api/v1/orders/${publicId}/tickets/${guestToken ? `?token=${encodeURIComponent(guestToken)}` : ""}`, {
-      headers: guestToken ? { Authorization: `Bearer ${guestToken}` } : {},
+    request<OrderTicketsResponse>(`/api/v1/orders/${publicId}/tickets/`, {
+      headers: guestToken ? { "X-Guest-Token": guestToken } : {},
     }),
 
   // Staff Check-In

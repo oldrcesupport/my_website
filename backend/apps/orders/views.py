@@ -117,20 +117,20 @@ class OrderStatusView(APIView):
                 {"error": "سفارش یافت نشد."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Allow authenticated admins or verified guest owner
-        is_staff_admin = (
+        # Allow authenticated admins (Super Admin / Admin) or verified guest owner
+        # Note: Scanner staff (STAFF_SCANNER) do NOT have access to customer orders
+        profile = getattr(request.user, "staff_profile", None)
+        is_admin_user = (
             request.user
             and request.user.is_authenticated
-            and (request.user.is_staff or request.user.is_superuser)
+            and (request.user.is_superuser or (profile and profile.is_admin))
         )
-        if not is_staff_admin:
+        if not is_admin_user:
             token = extract_guest_token(request, public_id=order.public_id)
             if not token or not order.verify_access_token(token):
                 return Response(
                     {"error": "عدم دسترسی به سفارش."}, status=status.HTTP_403_FORBIDDEN
                 )
-
-        return Response(OrderStatusSerializer(order).data)
 
         return Response(OrderStatusSerializer(order).data)
 

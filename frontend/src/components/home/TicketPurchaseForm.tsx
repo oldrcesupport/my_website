@@ -78,12 +78,6 @@ export function TicketPurchaseForm({ settings }: Props) {
         idempotencyKey
       );
 
-      if (res.guest_access_token) {
-        localStorage.setItem(`token_${res.order_public_id}`, res.guest_access_token);
-        localStorage.setItem("last_guest_token", res.guest_access_token);
-        localStorage.setItem("last_order_id", res.order_public_id);
-      }
-
       // Redirect directly to ZarinPal Sandbox StartPay
       if (res.payment_redirect_url) {
         window.location.href = res.payment_redirect_url;

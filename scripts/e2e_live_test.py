@@ -98,7 +98,7 @@ def main():
     for i, t in enumerate(tickets_data, 1):
         print(f"   Ticket #{i}: Serial = {t['ticket_number']}, Status = {t['effective_status']}")
         assert t['effective_status'] == "VALID"
-        assert t['raw_token'] != ""
+        assert "raw_token" not in t  # Security verified: raw bearer token is strictly NOT leaked in serializer
         assert len(t['qr_data_uri']) > 100
 
     # 6. Entrance Staff Check-In
@@ -111,9 +111,9 @@ def main():
     staff_token = login_res.json()["token"]
     print(f"   Staff logged in successfully. Token = {staff_token[:10]}...")
 
-    # Scan Ticket #1
-    t1_token = tickets_data[0]["raw_token"]
-    print(f"\n7. Scanning Ticket #1 (First scan at entrance)...")
+    # Scan Ticket #1 via QR token payload
+    t1_token = issued_tickets[0].get_raw_token()
+    print(f"\n7. Scanning Ticket #1 (First scan at entrance via QR token)...")
     scan_res1 = requests.post(
         f"{BASE_URL}/api/v1/staff/check-in/",
         json={"qr_token": t1_token, "scanner_device_id": "entrance-gate-01"},
@@ -136,12 +136,12 @@ def main():
     assert scan_res2.status_code == 409
     assert scan_res2.json()["result"] == "ALREADY_USED"
 
-    # Scan Ticket #2
-    t2_token = tickets_data[1]["raw_token"]
-    print(f"\n9. Scanning Ticket #2...")
+    # Scan Ticket #2 via Serial Number (Manual Staff Input)
+    t2_serial = tickets_data[1]["ticket_number"]
+    print(f"\n9. Scanning Ticket #2 (Manual entry via serial number: {t2_serial})...")
     scan_res3 = requests.post(
         f"{BASE_URL}/api/v1/staff/check-in/",
-        json={"qr_token": t2_token, "scanner_device_id": "entrance-gate-01"},
+        json={"qr_token": t2_serial, "scanner_device_id": "entrance-gate-01"},
         headers={"Authorization": f"Token {staff_token}"}
     )
     assert scan_res3.status_code == 200

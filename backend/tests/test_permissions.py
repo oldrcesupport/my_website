@@ -24,6 +24,34 @@ class TestRolePermissions:
         )
         assert resp_set.status_code == 403
 
+    def test_scanner_staff_cannot_access_private_customer_orders_or_tickets(
+        self, scanner_user
+    ):
+        from apps.orders.services import OrderService
+        from apps.orders.models import OrderStatus
+        from apps.tickets.services import TicketService
+
+        order, _, _ = OrderService.create_order("مشتری خصوصی", "09121111111", quantity=1)
+        order.status = OrderStatus.PAID
+        order.save()
+        TicketService.issue_tickets_for_order(order)
+        ticket = order.tickets.first()
+
+        client = APIClient()
+        client.force_authenticate(user=scanner_user)
+
+        # 1. Scanner staff cannot access order status
+        res_order = client.get(f"/api/v1/orders/{order.public_id}/status/")
+        assert res_order.status_code == 403
+
+        # 2. Scanner staff cannot retrieve order tickets
+        res_tickets = client.get(f"/api/v1/orders/{order.public_id}/tickets/")
+        assert res_tickets.status_code == 403
+
+        # 3. Scanner staff cannot retrieve QR image of unrelated ticket
+        res_qr = client.get(f"/api/v1/tickets/{ticket.public_id}/qr/")
+        assert res_qr.status_code == 403
+
     def test_admin_can_access_dashboard_but_cannot_change_price(self, admin_user):
         client = APIClient()
         client.force_authenticate(user=admin_user)

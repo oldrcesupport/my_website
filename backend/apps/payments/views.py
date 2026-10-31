@@ -43,7 +43,6 @@ class ZarinPalCallbackView(APIView):
         order_id_param = f"&order_id={order.public_id}" if order else ""
 
         guest_token = order.get_guest_access_token() if order else ""
-        token_param = f"&token={guest_token}" if guest_token else ""
 
         ref_id = ""
         if order:
@@ -52,7 +51,8 @@ class ZarinPalCallbackView(APIView):
                 ref_id = verified_att.reference_id
         ref_param = f"&ref_id={ref_id}" if ref_id else ""
 
-        redirect_url = f"{frontend_base}/payment/return?status={result_state.lower()}{order_id_param}{token_param}{ref_param}&auth={authority}"
+        # Note: guest_token is strictly sent via HttpOnly cookie, NEVER appended to the URL query string
+        redirect_url = f"{frontend_base}/payment/return?status={result_state.lower()}{order_id_param}{ref_param}&auth={authority}"
         resp = redirect(redirect_url)
         if guest_token and order:
             is_prod = getattr(settings, "APP_ENV", "development") == "production"
