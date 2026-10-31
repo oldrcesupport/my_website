@@ -48,7 +48,7 @@ urlpatterns = [
     re_path(r"^api/v1/orders/?$", CreateOrderView.as_view(), name="create-order"),
     re_path(r"^api/v1/orders/(?P<public_id>[0-9a-f-]+)/status/?$", OrderStatusView.as_view(), name="order-status"),
     re_path(r"^api/v1/orders/(?P<public_id>[0-9a-f-]+)/tickets/?$", OrderTicketsView.as_view(), name="order-tickets"),
-    re_path(r"^api/v1/tickets/(?P<public_id>[0-9a-f-]+)/qr\.png$", TicketQrImageView.as_view(), name="ticket-qr-png"),
+    re_path(r"^api/v1/tickets/(?P<public_id>[0-9a-f-]+)/qr(\.png)?/?$", TicketQrImageView.as_view(), name="ticket-qr-png"),
     re_path(r"^api/v1/payments/zarinpal/callback/?$", ZarinPalCallbackView.as_view(), name="zarinpal-callback"),
 
     # Authentication Endpoints

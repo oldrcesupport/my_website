@@ -144,7 +144,7 @@ export default function StaffScannerPage() {
           qrbox: { width: 250, height: 250 },
           aspectRatio: 1.0,
         },
-        (decodedText) => {
+        (decodedText: string) => {
           handleTokenScan(decodedText);
         },
         () => {} // ignore scan frame failures

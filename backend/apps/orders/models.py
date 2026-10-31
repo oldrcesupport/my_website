@@ -94,9 +94,11 @@ class Order(models.Model):
         return "agt_" + secrets.token_urlsafe(32)
 
     def verify_access_token(self, token: str) -> bool:
-        if not token:
+        if not token or not self.guest_access_token_hash:
             return False
-        return self.guest_access_token_hash == self.hash_access_token(token)
+        return secrets.compare_digest(
+            self.guest_access_token_hash, self.hash_access_token(token)
+        )
 
     def set_guest_access_token(self, raw_token: str):
         from apps.tickets.crypto import QRCryptoService

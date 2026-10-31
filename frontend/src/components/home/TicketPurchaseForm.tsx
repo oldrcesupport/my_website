@@ -22,7 +22,7 @@ export function TicketPurchaseForm({ settings }: Props) {
   const unitPrice = settings?.ticket_price_toman || 100000;
   const totalPrice = unitPrice * quantity;
   const isCutoffActive = settings?.sales_cutoff_active || false;
-  const isSalesDisabled = settings ? !settings.sales_enabled : false;
+  const isSalesDisabled = !settings || !settings.sales_enabled;
 
   const handleIncrement = () => {
     if (quantity < 10) setQuantity(quantity + 1);
@@ -48,8 +48,14 @@ export function TicketPurchaseForm({ settings }: Props) {
       cleanPhone = cleanPhone.replaceAll(persianDigits[i], i.toString()).replaceAll(arabicDigits[i], i.toString());
     }
 
-    if (!cleanPhone || cleanPhone.length < 10) {
-      setErrorMessage("لطفاً شماره تلفن همراه معتبر وارد نمایید (مثال: ۰۹۱۲۳۴۵۶۷۸۹).");
+    const iranianPhoneRegex = /^(\+98|0)?9\d{9}$/;
+    if (!cleanPhone || !iranianPhoneRegex.test(cleanPhone)) {
+      setErrorMessage("لطفاً شماره تلفن همراه معتبر ۱۱ رقمی وارد نمایید (مثال: ۰۹۱۲۳۴۵۶۷۸۹).");
+      return;
+    }
+
+    if (isSalesDisabled || isCutoffActive) {
+      setErrorMessage("در حال حاضر ثبت سفارش بلیت امکان‌پذیر نمی‌باشد.");
       return;
     }
 
@@ -57,7 +63,10 @@ export function TicketPurchaseForm({ settings }: Props) {
 
     try {
       // Generate client idempotency key to prevent accidental double submission
-      const idempotencyKey = `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const idempotencyKey =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const res = await api.createOrder(
         {
@@ -128,7 +137,16 @@ export function TicketPurchaseForm({ settings }: Props) {
         )}
 
         {/* Sales Disabled Banner */}
-        {isSalesDisabled && !isCutoffActive && (
+        {!settings && (
+          <div className="mb-8 p-4 rounded-2xl bg-[#A85E48]/10 border border-[#A85E48]/30 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
+            <div className="text-sm text-[#A85E48]">
+              امکان دریافت تنظیمات جاری سالن وجود ندارد. فروش آنلاین موقتاً غیرفعال است. لطفاً صفحه را تازه‌سازی نمایید.
+            </div>
+          </div>
+        )}
+
+        {settings && isSalesDisabled && !isCutoffActive && (
           <div className="mb-8 p-4 rounded-2xl bg-[#A85E48]/10 border border-[#A85E48]/30 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
             <div className="text-sm text-[#A85E48]">

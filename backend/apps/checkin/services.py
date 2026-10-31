@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 
 from apps.business_time.services import BusinessTimeService
@@ -68,7 +69,7 @@ class CheckInService:
                     staff_user=staff_user,
                     result=CheckInResult.INVALID_TOKEN,
                     scanner_device_id=scanner_device_id,
-                    notes=f"Unknown token/serial: {raw_input[:32]}",
+                    notes=f"sha256:{hashlib.sha256(raw_input.encode()).hexdigest()[:16]}",
                 )
                 return (
                     CheckInResult.INVALID_TOKEN,

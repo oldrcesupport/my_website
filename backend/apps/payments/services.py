@@ -59,14 +59,17 @@ class PaymentService:
         cls, authority: str, gateway_status: str
     ) -> tuple[str, str, Order | None]:
         """
-        Processes server-to-server callback response.
-        Atomically locks Order and PaymentAttempt to enforce idempotency and safe ticket issuance.
-        Handles boundary late payments without issuing invalid tickets.
+        Processes server-to-server callback response using non-blocking multi-phase verification.
+        - Phase 1: Short atomic transaction locks attempt, validates gateway status, claims attempt (VERIFYING).
+        - External verification: Calls gateway API completely outside database transactions (zero DB lock duration).
+        - Phase 2: Short atomic transaction locks attempt, updates status, checks boundary, issues tickets.
 
         Returns: (result_state: str, message: str, order: Order)
         Where result_state is one of: 'SUCCESS', 'FAILED', 'LATE_REVIEW', 'ALREADY_PROCESSED'
         """
         cleaned_auth = authority.strip()
+
+        # --- Phase 1: Claim & Validate Attempt in Short DB Transaction ---
         with transaction.atomic():
             attempt = (
                 PaymentAttempt.objects.select_for_update()
@@ -104,18 +107,40 @@ class PaymentService:
                     order,
                 )
 
-            # Verify with provider
             attempt.status = PaymentAttemptStatus.VERIFYING
             attempt.save(update_fields=["status"])
+            amount_toman = attempt.amount_toman
 
-            adapter = get_payment_adapter()
-            verified, ref_id, code, err_msg, raw_payload = adapter.verify_payment(
-                authority=cleaned_auth, amount_toman=attempt.amount_toman
+        # --- External Provider Verification (ZERO DATABASE LOCK HELD) ---
+        adapter = get_payment_adapter()
+        verified, ref_id, code, err_msg, raw_payload = adapter.verify_payment(
+            authority=cleaned_auth, amount_toman=amount_toman
+        )
+        now_utc = BusinessTimeService.get_now_utc()
+
+        # --- Phase 2: Finalize Attempt & Order in Short DB Transaction ---
+        with transaction.atomic():
+            attempt = (
+                PaymentAttempt.objects.select_for_update()
+                .select_related("order")
+                .filter(authority=cleaned_auth)
+                .first()
             )
+            order = attempt.order
+
+            # Double-check idempotency in case of concurrent execution
+            if (
+                attempt.status == PaymentAttemptStatus.VERIFIED
+                and order.status == OrderStatus.PAID
+            ):
+                return (
+                    "ALREADY_PROCESSED",
+                    "این تراکنش قبلاً با موفقیت تأیید و بلیت‌ها صادر شده‌اند.",
+                    order,
+                )
 
             attempt.gateway_response_code = code
             attempt.gateway_payload = raw_payload
-            now_utc = BusinessTimeService.get_now_utc()
             attempt.last_checked_at = now_utc
 
             if not verified:

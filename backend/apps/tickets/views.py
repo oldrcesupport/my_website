@@ -30,32 +30,19 @@ class OrderTicketsView(APIView):
                 {"error": "سفارش یافت نشد."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Access check
+        # Access check: strictly enforce authenticated staff/admin or valid guest bearer token
         is_staff_admin = (
             request.user
             and request.user.is_authenticated
             and (request.user.is_staff or request.user.is_superuser)
         )
-        has_access = is_staff_admin
-        token = extract_guest_token(request)
-        if not has_access and token:
-            has_access = order.verify_access_token(token)
-
-        if not has_access:
-            auth_param = request.query_params.get("auth") or request.headers.get("X-Payment-Authority")
-            if auth_param:
-                has_access = order.payment_attempts.filter(
-                    authority=auth_param.strip(), status="VERIFIED"
-                ).exists()
-
-        if not has_access and order.status in ["PAID", "PAID_LATE_REVIEW"]:
-            has_access = True
-
-        if not has_access:
-            return Response(
-                {"error": "عدم دسترسی به بلیت‌های این سفارش."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        if not is_staff_admin:
+            token = extract_guest_token(request, public_id=order.public_id)
+            if not token or not order.verify_access_token(token):
+                return Response(
+                    {"error": "عدم دسترسی به بلیت‌های این سفارش."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         tickets = order.tickets.all().order_by("id")
         serialized_tickets = TicketPassSerializer(tickets, many=True).data
@@ -70,7 +57,6 @@ class OrderTicketsView(APIView):
                 "business_date": str(order.business_date),
                 "order_status": order.status,
                 "reference_id": reference_id,
-                "guest_access_token": order.get_guest_access_token(),
                 "tickets": serialized_tickets,
             }
         )
@@ -97,11 +83,8 @@ class TicketQrImageView(APIView):
             and (request.user.is_staff or request.user.is_superuser)
         )
         if not is_staff_admin:
-            token = extract_guest_token(request)
-            has_access = ticket.order.verify_access_token(token)
-            if not has_access and ticket.order.status in ["PAID", "PAID_LATE_REVIEW"]:
-                has_access = True
-            if not has_access:
+            token = extract_guest_token(request, public_id=ticket.order.public_id)
+            if not token or not ticket.order.verify_access_token(token):
                 return Response(
                     {"error": "عدم دسترسی."}, status=status.HTTP_403_FORBIDDEN
                 )

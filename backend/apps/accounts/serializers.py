@@ -94,3 +94,16 @@ class StaffCreateUpdateSerializer(serializers.Serializer):
         if qs.exists():
             raise serializers.ValidationError("این نام کاربری قبلاً انتخاب شده است.")
         return value
+
+    def validate(self, attrs):
+        instance = self.context.get("instance")
+        password = attrs.get("password")
+        if not instance and not password:
+            raise serializers.ValidationError(
+                {"password": "تعیین رمز عبور برای ساخت پرسنل جدید الزامی است."}
+            )
+        if password and len(password) < 8:
+            raise serializers.ValidationError(
+                {"password": "رمز عبور باید حداقل ۸ کاراکتر باشد."}
+            )
+        return attrs

@@ -8,7 +8,6 @@ class TicketPassSerializer(serializers.ModelSerializer):
     effective_status = serializers.SerializerMethodField()
     qr_payload = serializers.SerializerMethodField()
     qr_data_uri = serializers.SerializerMethodField()
-    raw_token = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -25,7 +24,6 @@ class TicketPassSerializer(serializers.ModelSerializer):
             "used_at",
             "qr_payload",
             "qr_data_uri",
-            "raw_token",
         ]
 
     def get_effective_status(self, obj) -> str:
@@ -36,9 +34,6 @@ class TicketPassSerializer(serializers.ModelSerializer):
 
     def get_qr_data_uri(self, obj) -> str:
         return TicketService.render_qr_data_uri(obj.get_qr_payload())
-
-    def get_raw_token(self, obj) -> str:
-        return obj.get_raw_token()
 
 
 class AdminTicketSerializer(serializers.ModelSerializer):

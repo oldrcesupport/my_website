@@ -36,9 +36,8 @@ class ZarinPalCallbackView(APIView):
             authority, gateway_status
         )
 
-        frontend_base = (
-            (order.frontend_origin if order and order.frontend_origin else None)
-            or getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        frontend_base = getattr(
+            settings, "FRONTEND_URL", "http://localhost:3000"
         ).rstrip("/")
 
         order_id_param = f"&order_id={order.public_id}" if order else ""
@@ -55,13 +54,23 @@ class ZarinPalCallbackView(APIView):
 
         redirect_url = f"{frontend_base}/payment/return?status={result_state.lower()}{order_id_param}{token_param}{ref_param}&auth={authority}"
         resp = redirect(redirect_url)
-        if guest_token:
+        if guest_token and order:
+            is_prod = getattr(settings, "APP_ENV", "development") == "production"
+            resp.set_cookie(
+                f"guest_token_{order.public_id}",
+                guest_token,
+                max_age=86400 * 7,
+                httponly=True,
+                samesite="Lax",
+                secure=is_prod,
+            )
             resp.set_cookie(
                 "guest_access_token",
                 guest_token,
-                max_age=86400 * 30,
-                httponly=False,
+                max_age=86400 * 7,
+                httponly=True,
                 samesite="Lax",
+                secure=is_prod,
             )
         return resp
 

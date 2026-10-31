@@ -74,7 +74,7 @@ class StaffListCreateView(APIView):
         with transaction.atomic():
             user = User.objects.create_user(
                 username=data["username"],
-                password=data.get("password") or "TempPass123!",
+                password=data["password"],
                 email=data.get("email", ""),
                 is_staff=True,
                 is_active=data.get("is_active", True),

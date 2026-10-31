@@ -11,16 +11,21 @@ from .serializers import CreateOrderSerializer, OrderStatusSerializer
 from .services import OrderService
 
 
-def extract_guest_token(request) -> str:
+def extract_guest_token(request, public_id=None) -> str:
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.split("Bearer ")[-1].strip()
         if token.startswith("agt_"):
             return token
 
-    param_token = request.query_params.get("token", "")
-    if param_token.startswith("agt_"):
-        return param_token
+    custom_header = request.headers.get("X-Guest-Token", "").strip()
+    if custom_header.startswith("agt_"):
+        return custom_header
+
+    if public_id:
+        cookie_scoped = request.COOKIES.get(f"guest_token_{public_id}", "")
+        if cookie_scoped.startswith("agt_"):
+            return cookie_scoped
 
     cookie_token = request.COOKIES.get("guest_access_token", "")
     if cookie_token.startswith("agt_"):
@@ -40,16 +45,6 @@ class CreateOrderView(APIView):
 
         idempotency_key = request.headers.get("Idempotency-Key", "").strip() or None
 
-        origin = (
-            request.headers.get("origin")
-            or request.headers.get("referer", "")
-            or request.META.get("HTTP_ORIGIN", "")
-        ).rstrip("/")
-        if "/api" in origin:
-            origin = origin.split("/api")[0]
-        if "/#" in origin:
-            origin = origin.split("/#")[0]
-
         try:
             order, guest_token, is_created = OrderService.create_order(
                 purchaser_name=data["purchaser_name"],
@@ -57,7 +52,6 @@ class CreateOrderView(APIView):
                 quantity=data["quantity"],
                 purchaser_email=data.get("purchaser_email", ""),
                 idempotency_key=idempotency_key,
-                frontend_origin=origin,
             )
         except ValidationError as e:
             return Response(
@@ -65,18 +59,8 @@ class CreateOrderView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Resolve callback URL dynamically so it matches where the user came from (e.g. phone on LAN)
-        callback_url = None
-        if origin:
-            callback_url = f"{origin.rstrip('/')}/api/v1/payments/zarinpal/callback/"
-        elif request.get_host():
-            scheme = "https" if request.is_secure() else "http"
-            callback_url = f"{scheme}://{request.get_host()}/api/v1/payments/zarinpal/callback/"
-
-        # Initiate payment
-        pay_success, redirect_url, attempt, pay_err = PaymentService.initiate_payment(
-            order, callback_url=callback_url
-        )
+        # Initiate payment strictly using configured PAYMENT_CALLBACK_URL (no client-header poisoning)
+        pay_success, redirect_url, attempt, pay_err = PaymentService.initiate_payment(order)
         if not pay_success:
             return Response(
                 {
@@ -98,15 +82,26 @@ class CreateOrderView(APIView):
             "guest_access_token": guest_token,
         }
 
+        from django.conf import settings
+        is_prod = getattr(settings, "APP_ENV", "development") == "production"
+
         resp = Response(response_data, status=status.HTTP_201_CREATED)
         if guest_token:
+            resp.set_cookie(
+                f"guest_token_{order.public_id}",
+                guest_token,
+                max_age=86400 * 7,
+                httponly=True,
+                samesite="Lax",
+                secure=is_prod,
+            )
             resp.set_cookie(
                 "guest_access_token",
                 guest_token,
                 max_age=86400 * 7,
                 httponly=True,
                 samesite="Lax",
-                secure=False,  # Set to True in production
+                secure=is_prod,
             )
         return resp
 
@@ -122,28 +117,20 @@ class OrderStatusView(APIView):
                 {"error": "سفارش یافت نشد."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Allow authenticated admins or guest owner with valid token/authority/paid order
+        # Allow authenticated admins or verified guest owner
         is_staff_admin = (
             request.user
             and request.user.is_authenticated
             and (request.user.is_staff or request.user.is_superuser)
         )
         if not is_staff_admin:
-            token = extract_guest_token(request)
-            has_access = order.verify_access_token(token)
-            if not has_access:
-                auth_param = request.query_params.get("auth") or request.headers.get("X-Payment-Authority")
-                if auth_param:
-                    has_access = order.payment_attempts.filter(
-                        authority=auth_param.strip(), status="VERIFIED"
-                    ).exists()
-            if not has_access and order.status in ["PAID", "PAID_LATE_REVIEW"]:
-                has_access = True
-
-            if not has_access:
+            token = extract_guest_token(request, public_id=order.public_id)
+            if not token or not order.verify_access_token(token):
                 return Response(
                     {"error": "عدم دسترسی به سفارش."}, status=status.HTTP_403_FORBIDDEN
                 )
+
+        return Response(OrderStatusSerializer(order).data)
 
         return Response(OrderStatusSerializer(order).data)
 

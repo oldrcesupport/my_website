@@ -50,7 +50,7 @@ export interface TicketPass {
   used_at?: string | null;
   qr_payload: string;
   qr_data_uri: string;
-  raw_token: string;
+  raw_token?: string;
 }
 
 export interface OrderTicketsResponse {

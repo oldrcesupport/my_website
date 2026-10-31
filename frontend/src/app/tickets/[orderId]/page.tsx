@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useCallback, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { OrderTicketsResponse, TicketPass } from "@/types";
@@ -34,54 +34,78 @@ export default function TicketPassesPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const stopPollingRef = useRef(false);
 
-  const fetchTickets = (showLoader = true) => {
-    if (showLoader) setLoading(true);
-    const searchParams =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search)
-        : null;
-    const urlToken = searchParams?.get("token") || "";
-    const storedToken =
-      typeof window !== "undefined"
-        ? localStorage.getItem(`token_${orderId}`) ||
-          localStorage.getItem("last_guest_token") ||
-          ""
-        : "";
-    const effectiveToken = urlToken || storedToken;
+  const fetchTickets = useCallback(
+    async (showLoader = false) => {
+      if ((document.hidden && !showLoader) || (stopPollingRef.current && !showLoader)) return;
+      if (showLoader) setLoading(true);
 
-    if (urlToken && typeof window !== "undefined") {
-      localStorage.setItem(`token_${orderId}`, urlToken);
-      localStorage.setItem("last_guest_token", urlToken);
-    }
+      const searchParams =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search)
+          : null;
+      const urlToken = searchParams?.get("token") || "";
+      const storedToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem(`token_${orderId}`) ||
+            localStorage.getItem("last_guest_token") ||
+            ""
+          : "";
+      const effectiveToken = urlToken || storedToken;
 
-    api
-      .getOrderTickets(orderId, effectiveToken)
-      .then((res) => {
+      if (urlToken && typeof window !== "undefined") {
+        localStorage.setItem(`token_${orderId}`, urlToken);
+        localStorage.setItem("last_guest_token", urlToken);
+      }
+
+      try {
+        const res = await api.getOrderTickets(orderId, effectiveToken);
         setData(res);
+        setError("");
+
         if (res.guest_access_token && typeof window !== "undefined") {
           localStorage.setItem(`token_${orderId}`, res.guest_access_token);
           localStorage.setItem("last_guest_token", res.guest_access_token);
         }
-      })
-      .catch((err) => {
-        if (showLoader) {
-          setError(err.message || "خطا در بارگذاری بلیت‌ها یا عدم دسترسی.");
+
+        // Check if all tickets have reached terminal state (all used or expired)
+        if (res.tickets && res.tickets.length > 0) {
+          const allTerminal = res.tickets.every(
+            (t) =>
+              t.effective_status === "USED" ||
+              t.effective_status === "EXPIRED" ||
+              t.effective_status === "CANCELLED"
+          );
+          if (allTerminal) {
+            stopPollingRef.current = true;
+          }
         }
-      })
-      .finally(() => {
+      } catch (err: any) {
+        const msg = err.message || "خطا در بارگذاری بلیت‌ها یا عدم دسترسی.";
+        if (showLoader || !data) {
+          setError(msg);
+        }
+        // If 403 Forbidden or 404 Not Found, stop continuous polling
+        if (msg.includes("دسترسی") || msg.includes("یافت نشد")) {
+          stopPollingRef.current = true;
+        }
+      } finally {
         if (showLoader) setLoading(false);
-      });
-  };
+      }
+    },
+    [orderId, data]
+  );
 
   useEffect(() => {
     fetchTickets(true);
-    // Real-time status sync: polls quietly every 4 seconds
+
     const timer = setInterval(() => {
       fetchTickets(false);
     }, 4000);
+
     return () => clearInterval(timer);
-  }, [orderId]);
+  }, [fetchTickets]);
 
   const copyToClipboard = (text: string, field: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
