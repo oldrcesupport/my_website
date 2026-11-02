@@ -70,7 +70,7 @@ class Ticket(models.Model):
             return "USED"
 
         now = now_utc or BusinessTimeService.get_now_utc()
-        if now > self.valid_until:
+        if now >= self.valid_until:
             return "EXPIRED"
         if now < self.valid_from:
             return "NOT_YET_VALID"

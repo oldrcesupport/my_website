@@ -26,6 +26,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [user, setUser] = useState<StaffUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Skip auth check on login page
   const isLoginPage = pathname === "/admin/login";
@@ -36,31 +38,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") : "";
-    if (!token) {
-      router.push(`/admin/login?redirect=${pathname}`);
-      return;
-    }
-
-    api.getMe(token)
+    api.getMe("")
       .then((u) => {
         setUser(u);
       })
-      .catch(() => {
-        localStorage.removeItem("staff_token");
-        router.push(`/admin/login?redirect=${pathname}`);
+      .catch((err) => {
+        if (err.status === 401 || err.status === 403) {
+          router.push(`/admin/login?redirect=${pathname}`);
+        } else {
+          setAuthError("ارتباط با سرور برای بررسی نشست برقرار نشد. دوباره تلاش کنید.");
+        }
       })
       .finally(() => setLoading(false));
   }, [pathname, isLoginPage, router]);
 
-  const handleLogout = () => {
-    const token = localStorage.getItem("staff_token") || "";
-    if (token) {
-      api.logout(token).catch(() => {});
+  const handleLogout = async () => {
+    try {
+      await api.logout("");
+      router.push("/admin/login");
+    } catch {
+      window.alert("خروج انجام نشد. لطفاً اتصال را بررسی و دوباره تلاش کنید.");
     }
-    localStorage.removeItem("staff_token");
-    localStorage.removeItem("staff_user");
-    router.push("/admin/login");
   };
 
   if (isLoginPage) {
@@ -73,6 +71,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Loader2 className="w-8 h-8 animate-spin text-[#203D33]" />
       </div>
     );
+  }
+
+  if (authError) {
+    return <div role="alert" className="min-h-screen p-8 text-center">{authError} <button className="underline" onClick={() => window.location.reload()}>تلاش مجدد</button></div>;
   }
 
   // If user is logged in as scanner-only staff, show clean role explanation with switch button
@@ -92,7 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onClick={handleLogout}
               className="w-full py-3 rounded-xl bg-[#203D33] text-[#FFFCF6] text-xs font-bold hover:bg-[#294D40] transition-colors"
             >
-              خروج و ورود با حساب مدیر ارشد (admin)
+              خروج و ورود با حساب مدیر
             </button>
             <Link
               href="/staff/scanner"
@@ -122,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-full md:w-64 bg-[#203D33] text-[#FFFCF6] flex flex-col justify-between shrink-0 border-l border-[#294D40]">
         <div>
           {/* Brand Heading */}
-          <div className="p-6 border-b border-[#294D40] flex items-center gap-3">
+          <div className="p-4 md:p-6 border-b border-[#294D40] flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#C3A16A] text-[#203D33] flex items-center justify-center font-bold">
               <Music2 className="w-5 h-5 text-[#203D33]" />
             </div>
@@ -130,10 +132,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-sm font-bold text-[#FFFCF6] block">پنل مدیریت سالن</span>
               <span className="text-xs text-[#C3A16A] block">موسیقی زنده</span>
             </div>
+            <button type="button" className="mr-auto rounded-lg border border-white/30 px-3 py-2 text-xs md:hidden" aria-expanded={mobileNavOpen} aria-controls="admin-navigation" onClick={() => setMobileNavOpen(!mobileNavOpen)}>
+              {mobileNavOpen ? "بستن منو" : "منوی مدیریت"}
+            </button>
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-4 space-y-1 text-sm font-medium">
+          <nav id="admin-navigation" className={`${mobileNavOpen ? "block" : "hidden"} md:block p-4 space-y-1 text-sm font-medium`}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -141,6 +146,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMobileNavOpen(false)}
                   className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-colors ${
                     isActive
                       ? "bg-[#C3A16A] text-[#203D33] font-bold shadow-xs"
@@ -159,6 +165,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="pt-4 border-t border-[#294D40] mt-4">
               <Link
                 href="/staff/scanner"
+                onClick={() => setMobileNavOpen(false)}
                 className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#C3A16A] hover:bg-[#FFFCF6]/10 transition-colors"
               >
                 <QrCode className="w-4 h-4" />
@@ -169,7 +176,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* User Badge & Logout */}
-        <div className="p-4 border-t border-[#294D40] space-y-3">
+        <div className={`${mobileNavOpen ? "block" : "hidden"} md:block p-4 border-t border-[#294D40] space-y-3`}>
           <div className="flex items-center justify-between text-xs">
             <div>
               <span className="font-bold text-[#FFFCF6] block">

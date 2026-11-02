@@ -12,7 +12,7 @@ export default function AdminSettingsPage() {
     description: "",
     address: "",
     phone: "",
-    ticket_price_toman: 100000,
+    ticket_price_toman: 0,
     is_demo_price: true,
     sales_enabled: true,
     business_timezone: "Asia/Tehran",
@@ -22,12 +22,13 @@ export default function AdminSettingsPage() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
+    const token = "";
     api.getAdminSettings(token)
       .then((data) => {
         setFormData({
@@ -36,14 +37,15 @@ export default function AdminSettingsPage() {
           description: data.description || "",
           address: data.address || "",
           phone: data.phone || "",
-          ticket_price_toman: data.ticket_price_toman || 100000,
+          ticket_price_toman: data.ticket_price_toman ?? 0,
           is_demo_price: data.is_demo_price ?? true,
           sales_enabled: data.sales_enabled ?? true,
           business_timezone: data.business_timezone || "Asia/Tehran",
           business_day_cutoff: data.business_day_cutoff || "00:00:00",
-          checkout_cutoff_margin_minutes: data.checkout_cutoff_margin_minutes || 5,
+          checkout_cutoff_margin_minutes: data.checkout_cutoff_margin_minutes ?? 5,
           capacity_policy: data.capacity_policy || "UNCONFIGURED",
         });
+        setLoaded(true);
       })
       .catch((err) => setErrorMsg(err.message))
       .finally(() => setLoading(false));
@@ -55,7 +57,7 @@ export default function AdminSettingsPage() {
     setSuccessMsg("");
     setErrorMsg("");
 
-    const token = localStorage.getItem("staff_token") || "";
+    const token = "";
     try {
       await api.updateAdminSettings(token, {
         ...formData,
@@ -72,6 +74,10 @@ export default function AdminSettingsPage() {
 
   if (loading) {
     return <div className="py-20 text-center text-xs text-[#77756D]">در حال بارگذاری تنظیمات...</div>;
+  }
+
+  if (!loaded) {
+    return <div role="alert" className="p-4 text-sm text-[#733c2d]">بارگذاری تنظیمات انجام نشد: {errorMsg || "خطای ارتباط با سرور"}</div>;
   }
 
   return (
@@ -185,7 +191,7 @@ export default function AdminSettingsPage() {
               <input
                 type="number"
                 required
-                min={1000}
+                min={1}
                 value={formData.ticket_price_toman}
                 onChange={(e) => setFormData({ ...formData, ticket_price_toman: Number(e.target.value) })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs font-bold text-[#203D33]"
@@ -218,7 +224,7 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="number"
-                min={1}
+                min={0}
                 max={60}
                 value={formData.checkout_cutoff_margin_minutes}
                 onChange={(e) => setFormData({ ...formData, checkout_cutoff_margin_minutes: Number(e.target.value) })}

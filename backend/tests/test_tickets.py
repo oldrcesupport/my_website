@@ -2,6 +2,8 @@ from datetime import timedelta
 
 import pytest
 from apps.orders.services import OrderService
+from apps.orders.models import OrderStatus
+from django.core.exceptions import ValidationError
 from apps.tickets.crypto import QRCryptoService
 from apps.tickets.models import TicketStatus
 from apps.tickets.services import TicketService
@@ -13,6 +15,8 @@ class TestTicketLifecycle:
         order, _, _ = OrderService.create_order(
             "خانواده رضایی", "09128889999", quantity=3
         )
+        order.status = OrderStatus.PAID
+        order.save(update_fields=["status"])
         tickets = TicketService.issue_tickets_for_order(order)
 
         assert len(tickets) == 3
@@ -28,9 +32,12 @@ class TestTicketLifecycle:
         enc = QRCryptoService.encrypt_token(token)
         dec = QRCryptoService.decrypt_token(enc)
         assert dec == token
+        assert QRCryptoService.build_qr_payload(token) == token
 
     def test_effective_status_transitions(self):
         order, _, _ = OrderService.create_order("تست وضعیت", "09120001111", quantity=1)
+        order.status = OrderStatus.PAID
+        order.save(update_fields=["status"])
         ticket = TicketService.issue_tickets_for_order(order)[0]
 
         # Initially VALID
@@ -47,3 +54,9 @@ class TestTicketLifecycle:
         # If marked CANCELLED -> CANCELLED
         ticket.status = TicketStatus.CANCELLED
         assert ticket.get_effective_status() == "CANCELLED"
+
+    def test_unpaid_order_cannot_issue_tickets(self):
+        order, _, _ = OrderService.create_order("Guest", "09120001111", quantity=1)
+        with pytest.raises(ValidationError):
+            TicketService.issue_tickets_for_order(order)
+        assert not order.tickets.exists()

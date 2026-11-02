@@ -8,6 +8,7 @@ from apps.accounts.views import (
     MeView,
     StaffDetailUpdateView,
     StaffListCreateView,
+    csrf_cookie,
 )
 from apps.checkin.views import (
     AdminDashboardStatsView,
@@ -18,6 +19,7 @@ from apps.core.views import (
     AdminAuditLogListView,
     AdminSettingsView,
     PublicSettingsView,
+    health,
 )
 from apps.orders.views import (
     AdminOrderDetailView,
@@ -38,6 +40,7 @@ from apps.tickets.views import (
 )
 
 urlpatterns = [
+    re_path(r"^api/v1/health/?$", health, name="health"),
     path("admin/", admin.site.urls),
     # OpenAPI Schema & Interactive Documentation
     re_path(r"^api/schema/?$", SpectacularAPIView.as_view(), name="schema"),
@@ -52,6 +55,7 @@ urlpatterns = [
     re_path(r"^api/v1/payments/zarinpal/callback/?$", ZarinPalCallbackView.as_view(), name="zarinpal-callback"),
 
     # Authentication Endpoints
+    re_path(r"^api/v1/auth/csrf/?$", csrf_cookie, name="auth-csrf"),
     re_path(r"^api/v1/auth/login/?$", LoginView.as_view(), name="auth-login"),
     re_path(r"^api/v1/auth/logout/?$", LogoutView.as_view(), name="auth-logout"),
     re_path(r"^api/v1/auth/me/?$", MeView.as_view(), name="auth-me"),

@@ -1,4 +1,5 @@
 # Implementation Plan: Premium Live Music Restaurant Ticketing Platform
+> **2026-11-02 update:** This audit, plan or report records an earlier snapshot; its claims and test results are historical, not current production-readiness evidence. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ## 1. Project Overview & Architectural Vision
 This project is a dedicated admission ticketing platform for the live-music area of a premium restaurant. It is architected as a modular monolith:

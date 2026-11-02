@@ -84,10 +84,9 @@ class RestaurantSettings(models.Model):
             id=1,
             defaults={
                 "restaurant_name": getattr(settings, "RESTAURANT_NAME", "نام رستوران"),
-                "ticket_price_toman": getattr(
-                    settings, "DEV_DEMO_TICKET_PRICE_TOMAN", 100000
-                ),
-                "is_demo_price": getattr(settings, "IS_DEMO_PRICE", True),
+                "ticket_price_toman": 0 if settings.APP_ENV == "production" else getattr(settings, "DEV_DEMO_TICKET_PRICE_TOMAN", 100000),
+                "is_demo_price": True if settings.APP_ENV == "production" else getattr(settings, "IS_DEMO_PRICE", True),
+                "sales_enabled": settings.APP_ENV != "production",
                 "business_timezone": getattr(
                     settings, "BUSINESS_TIMEZONE", "Asia/Tehran"
                 ),

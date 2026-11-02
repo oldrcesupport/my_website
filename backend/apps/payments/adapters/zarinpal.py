@@ -63,14 +63,15 @@ class ZarinPalV4Adapter(BasePaymentAdapter):
                 headers={"Content-Type": "application/json"},
                 timeout=15,
             )
+            response.raise_for_status()
             data = response.json()
         except requests.exceptions.RequestException as e:
             return (
                 False,
                 "",
                 "",
-                f"خطا در اتصال به درگاه زرین‌پال: {e!s}",
-                {"error": str(e)},
+                "خطا در اتصال به درگاه زرین‌پال.",
+                {"error": "gateway_connection_error"},
             )
         except ValueError:
             return (
@@ -78,9 +79,11 @@ class ZarinPalV4Adapter(BasePaymentAdapter):
                 "",
                 "",
                 "پاسخ نامعتبر از درگاه زرین‌پال دریافت شد.",
-                {"raw_text": response.text},
+                {"error": "invalid_gateway_response"},
             )
 
+        if not isinstance(data, dict) or not isinstance(data.get("data"), dict):
+            return False, "", "", "پاسخ نامعتبر از درگاه دریافت شد.", {"error": "invalid_gateway_response"}
         res_data = data.get("data", {})
         code = res_data.get("code")
         authority = res_data.get("authority", "")
@@ -89,13 +92,7 @@ class ZarinPalV4Adapter(BasePaymentAdapter):
             redirect_url = f"{self.startpay_url}/{authority}"
             return True, authority, redirect_url, "", data
 
-        errors = data.get("errors", [])
-        error_msg = (
-            f"کد خطا {code}: {data.get('message', 'تراکنش توسط درگاه پذیرفته نشد.')}"
-        )
-        if errors:
-            error_msg += f" ({errors})"
-        return False, "", "", error_msg, data
+        return False, "", "", "درگاه درخواست پرداخت را نپذیرفت.", data
 
     def verify_payment(
         self, authority: str, amount_toman: int
@@ -116,14 +113,15 @@ class ZarinPalV4Adapter(BasePaymentAdapter):
                 headers={"Content-Type": "application/json"},
                 timeout=15,
             )
+            response.raise_for_status()
             data = response.json()
         except requests.exceptions.RequestException as e:
             return (
                 False,
                 "",
                 -999,
-                f"خطای شبکه در اعتبارسنجی زرین‌پال: {e!s}",
-                {"error": str(e)},
+                "خطای شبکه در اعتبارسنجی زرین‌پال.",
+                {"error": "gateway_connection_error"},
             )
         except ValueError:
             return (
@@ -131,20 +129,22 @@ class ZarinPalV4Adapter(BasePaymentAdapter):
                 "",
                 -998,
                 "پاسخ نامعتبر سرور زرین‌پال هنگام اعتبارسنجی.",
-                {"raw_text": response.text},
+                {"error": "invalid_gateway_response"},
             )
 
+        if not isinstance(data, dict) or not isinstance(data.get("data"), dict):
+            return False, "", -998, "پاسخ نامعتبر درگاه.", {"error": "invalid_gateway_response"}
         res_data = data.get("data", {})
         code = res_data.get("code")
-        ref_id = str(res_data.get("ref_id", ""))
+        raw_ref_id = res_data.get("ref_id")
+        ref_id = str(raw_ref_id) if raw_ref_id is not None else ""
 
         # Code 100: Success
         # Code 101: Already Verified
-        if code in (100, 101):
+        if code in (100, 101) and ref_id and ref_id != "0":
             return True, ref_id, code, "", data
 
-        errors = data.get("errors", [])
-        error_msg = f"اعتبارسنجی ناموفق بود (کد {code})"
-        if errors:
-            error_msg += f" - {errors}"
-        return False, "", code or -1, error_msg, data
+        if code in (100, 101):
+            return False, "", -998, "شناسه پیگیری در پاسخ درگاه وجود ندارد.", {"error": "missing_reference"}
+
+        return False, "", code or -1, "درگاه پرداخت را تأیید نکرد.", data

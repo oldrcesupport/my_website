@@ -3,6 +3,7 @@ from apps.core.services import log_audit
 from apps.orders.models import Order
 from apps.orders.views import extract_guest_token
 from django.db.models import Q
+from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import permissions, status
@@ -127,9 +128,10 @@ class AdminTicketListView(APIView):
 class AdminTicketCancelView(APIView):
     permission_classes = [IsAdminUserRole]
 
+    @transaction.atomic
     def post(self, request, pk):
         try:
-            ticket = Ticket.objects.select_related("order").get(pk=pk)
+            ticket = Ticket.objects.select_for_update().select_related("order").get(pk=pk)
         except Ticket.DoesNotExist:
             return Response(
                 {"error": "بلیت یافت نشد."}, status=status.HTTP_404_NOT_FOUND

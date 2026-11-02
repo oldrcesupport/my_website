@@ -28,25 +28,20 @@ export default function VerifyQrPage({ params }: PageProps) {
   const [staffLoggedIn, setStaffLoggedIn] = useState(false);
 
   useEffect(() => {
-    const staffToken =
-      typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
-
-    if (!staffToken) {
-      setStaffLoggedIn(false);
-      setLoading(false);
-      return;
-    }
-
-    setStaffLoggedIn(true);
     api
-      .staffCheckIn(rawToken, "direct-camera-link", staffToken)
+      .getMe("")
+      .then((user) => {
+        if (!user.can_scan) throw Object.assign(new Error("دسترسی اسکن مجاز نیست."), { status: 403 });
+        setStaffLoggedIn(true);
+        return api.staffCheckIn(rawToken, "direct-camera-link", "");
+      })
       .then((res) => {
         setResult(res);
       })
       .catch((err) => {
         let resPayload: CheckInScanResult = {
-          result: "INVALID_TOKEN",
-          message: err.message || "خطای بررسی بلیت",
+          result: err.status === 401 || err.status === 403 ? "AUTH_ERROR" : err.status ? "SERVER_ERROR" : "NETWORK_ERROR",
+          message: err.message || "امکان بررسی بلیت وجود ندارد؛ دوباره تلاش کنید.",
         };
         if (err.status === 409) {
           resPayload = {

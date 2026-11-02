@@ -25,7 +25,7 @@ class TestSetupRestaurantCommand:
 
         # 2. Run setup_restaurant command
         out = io.StringIO()
-        call_command("setup_restaurant", stdout=out)
+        call_command("setup_restaurant", staff_password="A-unique-scanner-password", stdout=out)
         output_str = out.getvalue()
 
         # 3. Refresh user and ensure password hash is UNCHANGED
@@ -35,8 +35,7 @@ class TestSetupRestaurantCommand:
 
         # 4. Verify stdout does NOT print sensitive passwords
         assert "OriginalSecretPassword123!" not in output_str
-        assert "Password='AdminSecret123!'" not in output_str
-        assert "Password='StaffSecret123!'" not in output_str
+        assert "Password=" not in output_str
 
         # 5. Run setup_restaurant a SECOND time
         out2 = io.StringIO()
@@ -55,7 +54,7 @@ class TestSetupRestaurantCommand:
         original_scanner_hash = scanner.password
 
         out = io.StringIO()
-        call_command("setup_restaurant", stdout=out)
+        call_command("setup_restaurant", admin_password="A-unique-admin-password", stdout=out)
 
         scanner.refresh_from_db()
         assert scanner.password == original_scanner_hash

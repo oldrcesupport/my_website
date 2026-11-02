@@ -26,7 +26,7 @@ const faqs = [
   },
   {
     q: "چگونه به بارکدها دسترسی پیدا کنم اگر صفحه را ببندم؟",
-    a: "پس از پرداخت، مشخصات بلیت‌ها در دستگاه شما ثبت می‌شود و با همان مرورگر می‌توانید صفحه را مجدداً باز نمایید. همچنین در صورت نیاز، پرسنل پذیرش با استعلام شماره همراه خریدار می‌توانند سوابق خرید شما را بررسی کنند.",
+    a: "نشانی صفحه بلیت را در همان مرورگر نگه دارید و بلیت‌ها را ذخیره یا چاپ کنید. دسترسی به سفارش به کوکی همان مرورگر وابسته است؛ با پاک شدن کوکی‌ها یا تغییر دستگاه، بازیابی خودکار در حال حاضر فراهم نیست.",
   },
 ];
 
@@ -57,7 +57,7 @@ export function FaqSection() {
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  className="w-full p-5 text-right flex items-center justify-between gap-4 focus:outline-none"
+                  className="w-full p-5 text-right flex items-center justify-between gap-4"
                   aria-expanded={isOpen}
                 >
                   <span className="text-base font-bold text-[#203D33]">

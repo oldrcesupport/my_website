@@ -1,4 +1,5 @@
 # Responsive Quality Assurance Specification and Device Matrix
+> **2026-11-02 update:** The homepage, selected 320px scanner and admin states were checked; the remaining routes and breakpoints have not been comprehensively verified. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 **Project:** oldrcesupport/my_website  
 
 ---

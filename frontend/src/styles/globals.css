@@ -43,6 +43,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+:focus-visible {
+  outline: 3px solid #986627;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Custom Utilities for Premium Editorial Hospitality Feel */
 .bg-warm { background-color: var(--bg-warm); }
 .bg-surface { background-color: var(--surface-warm); }

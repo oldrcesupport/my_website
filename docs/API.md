@@ -1,180 +1,52 @@
-# REST API Specification (OpenAPI v3 Aligned)
+# API reference
 
-## Base URL
-`/api/v1/`
+Current as of 2026-11-02. See `backend/config/urls.py` and the serializers for
+the authoritative implementation. The generated OpenAPI schema has known
+inference warnings and is not a complete contract.
 
----
+Serve the frontend and `/api/` on the same origin. Staff authentication uses a
+Django session cookie, not JWT or DRF tokens. Before login and other unsafe
+session requests, `GET /api/v1/auth/csrf/` and send the `csrftoken` value in
+`X-CSRFToken`. Login returns `user` and an HttpOnly session cookie, not a token.
 
-## 1. Public Endpoints
+## Public and guest endpoints
 
-### 1.1 `GET /api/v1/public/settings/`
-Retrieves public brand information, current pricing, currency label, demo price status, and business cutoff details.
-- **Auth**: None
-- **Response `200 OK`**:
-```json
-{
-  "restaurant_name": "نام رستوران",
-  "tagline": "",
-  "description": "",
-  "address": "",
-  "phone": "",
-  "currency_unit": "TOMAN",
-  "currency_label": "تومان",
-  "ticket_price_toman": 100000,
-  "is_demo_price": true,
-  "sales_enabled": true,
-  "business_timezone": "Asia/Tehran",
-  "business_day_cutoff": "00:00:00",
-  "current_business_date": "2026-10-31",
-  "sales_cutoff_active": false
-}
-```
+| Method and path | Behavior |
+|---|---|
+| `GET /api/v1/health/` | Database connectivity probe. |
+| `GET /api/v1/public/settings/` | Public settings; `ticket_price_toman` can be null if unavailable, with sales disabled. |
+| `POST /api/v1/orders/` | Guest order plus gateway request; body includes `purchaser_name`, `purchaser_phone`, `quantity`, and optional `purchaser_email`. Optional `Idempotency-Key` is at most 128 characters. |
+| `GET /api/v1/orders/{public_id}/status/` | Owner or administrator only; returns `public_id`, `status`, `tickets_count`, `reference_id` and order information. |
+| `GET /api/v1/orders/{public_id}/tickets/` | Owner or administrator only; returns individual passes, including `qr_payload` and `qr_data_uri`. |
+| `GET /api/v1/tickets/{public_id}/qr/` | Owner or administrator only; PNG. `.png` is also accepted. |
+| `GET /api/v1/payments/zarinpal/callback/` | Provider browser return with `Authority` and `Status`; server verification precedes issuance. |
 
-### 1.2 `POST /api/v1/orders/`
-Creates a guest checkout order and initiates a payment gateway transaction.
-- **Auth**: None
-- **Headers**: `Idempotency-Key` (optional string)
-- **Request Body**:
-```json
-{
-  "purchaser_name": "علی محمدی",
-  "purchaser_phone": "09121234567",
-  "purchaser_email": "ali@example.com",
-  "quantity": 2
-}
-```
-- **Response `201 Created`**:
-```json
-{
-  "order_public_id": "c1f7b8b2-4d22-44c1-92b1-5dfbe1d49102",
-  "quantity": 2,
-  "unit_price_toman": 100000,
-  "total_price_toman": 200000,
-  "currency": "TOMAN",
-  "business_date": "2026-10-31",
-  "payment_deadline": "2026-10-31T08:35:00Z",
-  "payment_redirect_url": "https://sandbox.zarinpal.com/pg/StartPay/A00000000000000000000000000000000000",
-  "guest_access_token": "agt_7f9b8c1..."
-}
-```
+The order creation response contains `order_public_id`, `quantity`,
+`unit_price_toman`, `total_price_toman`, `currency_unit`, `business_date`,
+`payment_deadline` and `payment_redirect_url`. It sets HttpOnly guest cookies;
+it does not return the guest ownership token in JSON. Existing clients may send
+`X-Guest-Token` or Bearer credentials, but browser clients use cookies. A
+repeated key returns 409; recovery after a lost creation response remains open.
 
-### 1.3 `GET /api/v1/orders/{public_id}/status/`
-Polls or verifies current order state.
-- **Auth**: Guest Access Token (Bearer header or cookie `guest_access_token`)
-- **Response `200 OK`**:
-```json
-{
-  "order_public_id": "c1f7b8b2-4d22-44c1-92b1-5dfbe1d49102",
-  "status": "PAID",
-  "quantity": 2,
-  "total_price_toman": 200000,
-  "paid_at": "2026-10-31T08:32:15Z",
-  "tickets_issued": 2
-}
-```
+`qr_payload` contains the **one-time admission credential**, and `qr_data_uri`
+encodes the same credential in an image. Treat both as sensitive: only the owner
+or an administrator may receive them; never log or put them in a URL. Historical
+URL-format QR codes are still accepted by the scanner.
 
-### 1.4 `GET /api/v1/orders/{public_id}/tickets/`
-Retrieves purchased ticket passes and rendered QR data.
-- **Auth**: Guest Access Token (header or cookie)
-- **Response `200 OK`**:
-```json
-{
-  "order_public_id": "c1f7b8b2-4d22-44c1-92b1-5dfbe1d49102",
-  "purchaser_name": "علی محمدی",
-  "business_date": "2026-10-31",
-  "tickets": [
-    {
-      "public_id": "e93ab210-911b-4328-98e3-fa4a8d4c9a01",
-      "ticket_number": "TKT-20261031-0001",
-      "status": "ISSUED",
-      "effective_status": "VALID",
-      "valid_from": "2026-10-31T08:32:15Z",
-      "valid_until": "2026-10-31T20:30:00Z",
-      "qr_payload": "https://restaurant.example/v/t/7f8a9b...",
-      "qr_token": "7f8a9b..."
-    }
-  ]
-}
-```
+## Staff and administration
 
-### 1.5 `GET /api/v1/payments/zarinpal/callback/`
-Server-side callback receiver when customer is redirected back from ZarinPal.
-- **Parameters**: `Authority`, `Status`
-- Performs server-to-server verification, confirms amount in Rial, updates Order & PaymentAttempt atomically, issues tickets, and redirects to frontend `/payment/return?order_id=...`.
+- `POST /api/v1/auth/login/`, `POST /api/v1/auth/logout/`, `GET /api/v1/auth/me/`.
+- `POST /api/v1/staff/check-in/`: `qr_token` and optional `scanner_device_id`;
+  `SUCCESS` is 200, `ALREADY_USED` 409, `INVALID_TOKEN` 404, and expired,
+  cancelled or unpaid states 400. The body includes `result`, `message`,
+  `ticket_number`, `scanned_at`, and `used_at`.
+- `GET /api/v1/staff/check-in/history/`: up to 30 recent records; scanner
+  accounts see their own.
+- Admin endpoints include dashboard, orders and order detail, tickets and ticket
+  cancellation, payments and verification retry, settings, staff and audit logs.
+  List views currently cap results at 100 rather than implementing full
+  pagination. Scanner accounts cannot use administrative endpoints.
 
----
-
-## 2. Staff Scanner Endpoints
-
-### 2.1 `POST /api/v1/staff/check-in/`
-Atomic check-in and redemption of a scanned ticket credential.
-- **Auth**: Staff JWT or Session (`STAFF_SCANNER`, `ADMIN`, or `SUPER_ADMIN`)
-- **Request Body**:
-```json
-{
-  "qr_token": "7f8a9b...",
-  "scanner_device_id": "ipad-entrance-01"
-}
-```
-- **Response `200 OK` (Success)**:
-```json
-{
-  "result": "SUCCESS",
-  "message": "ورود مجاز است",
-  "ticket_number": "TKT-20261031-0001",
-  "scanned_at": "2026-10-31T18:45:10Z"
-}
-```
-- **Response `409 Conflict` (Already Used)**:
-```json
-{
-  "result": "ALREADY_USED",
-  "message": "این بلیت قبلاً استفاده شده است",
-  "ticket_number": "TKT-20261031-0001",
-  "previously_used_at": "2026-10-31T18:10:02Z"
-}
-```
-- **Response `400 Bad Request` (Expired / Invalid / Unpaid)**:
-```json
-{
-  "result": "EXPIRED",
-  "message": "مهلت اعتبار بلیت منقضی شده است (مربوط به روز گذشته)"
-}
-```
-
-### 2.2 `GET /api/v1/staff/check-in/history/`
-Returns the 20 most recent scans performed by the authenticated staff user.
-
----
-
-## 3. Administrative Endpoints (Admin & Super Admin)
-
-### 3.1 Authentication
-- `POST /api/v1/auth/login/`
-- `POST /api/v1/auth/logout/`
-- `GET /api/v1/auth/me/`
-
-### 3.2 Operational Dashboard
-- `GET /api/v1/admin/dashboard/`
-Returns real KPI stats:
-- `today_paid_tickets_count`
-- `today_revenue_toman`
-- `today_checkins_count`
-- `today_unused_valid_tickets`
-- `pending_payments_count`
-- `recent_orders`
-- `recent_checkins`
-
-### 3.3 Management
-- `GET /api/v1/admin/orders/` (Pagination, search by phone, status filter)
-- `GET /api/v1/admin/orders/{id}/`
-- `GET /api/v1/admin/tickets/` (Search by ticket number, filter by date & status)
-- `POST /api/v1/admin/tickets/{id}/cancel/` (Super Admin or Admin only, records audit log)
-- `GET /api/v1/admin/payments/` (Status, authority, amount)
-- `POST /api/v1/admin/payments/{id}/retry-verification/` (Re-checks unverified gateway session)
-- `GET /api/v1/admin/settings/`
-- `PATCH /api/v1/admin/settings/` (Update restaurant name, demo price, cutoff, sales status)
-- `GET /api/v1/admin/staff/`
-- `POST /api/v1/admin/staff/`
-- `PATCH /api/v1/admin/staff/{id}/`
-
+Guest and staff permissions are enforced server-side. Session-authenticated
+unsafe requests require CSRF. Do not assume a successful HTTP redirect or
+frontend query parameter means a payment was verified.

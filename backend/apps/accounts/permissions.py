@@ -15,7 +15,7 @@ class IsStaffScannerUser(permissions.BasePermission):
         profile = getattr(request.user, "staff_profile", None)
         if profile and profile.can_scan:
             return True
-        return request.user.is_staff
+        return False
 
 
 class IsAdminUserRole(permissions.BasePermission):

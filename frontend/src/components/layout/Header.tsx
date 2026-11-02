@@ -31,7 +31,7 @@ export function Header({ restaurantName = "نام رستوران" }: HeaderProps
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#262A25]">
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-[#262A25]">
             <a href="#about-lounge" className="hover:text-[#203D33] transition-colors">
               درباره سالن موسیقی
             </a>
@@ -47,7 +47,7 @@ export function Header({ restaurantName = "نام رستوران" }: HeaderProps
           </nav>
 
           {/* Action CTAs */}
-          <div className="hidden sm:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             <Link
               href="/admin/dashboard"
               className="px-3.5 py-2 text-xs font-medium text-[#77756D] hover:text-[#203D33] hover:bg-[#203D33]/5 rounded-lg flex items-center gap-1.5 transition-colors"
@@ -74,11 +74,12 @@ export function Header({ restaurantName = "نام رستوران" }: HeaderProps
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-[#262A25] hover:bg-[#E6DED1]/50 focus:outline-none"
               aria-label="منو"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -88,7 +89,7 @@ export function Header({ restaurantName = "نام رستوران" }: HeaderProps
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#FFFCF6] border-b border-[#E6DED1] px-4 pt-2 pb-6 space-y-3">
+        <div className="lg:hidden bg-[#FFFCF6] border-b border-[#E6DED1] px-4 pt-2 pb-6 space-y-3">
           <a
             href="#about-lounge"
             onClick={() => setMobileMenuOpen(false)}

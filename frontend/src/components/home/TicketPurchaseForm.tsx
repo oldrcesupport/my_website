@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { PublicRestaurantSettings } from "@/types";
 import { formatToman, toPersianDigits } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -18,11 +18,13 @@ export function TicketPurchaseForm({ settings }: Props) {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const submitting = useRef(false);
+  const idempotencyKey = useRef<string | null>(null);
 
-  const unitPrice = settings?.ticket_price_toman || 100000;
+  const unitPrice = settings?.ticket_price_toman ?? 0;
   const totalPrice = unitPrice * quantity;
   const isCutoffActive = settings?.sales_cutoff_active || false;
-  const isSalesDisabled = !settings || !settings.sales_enabled;
+  const isSalesDisabled = !settings || !settings.sales_enabled || settings.ticket_price_toman == null;
 
   const handleIncrement = () => {
     if (quantity < 10) setQuantity(quantity + 1);
@@ -34,6 +36,7 @@ export function TicketPurchaseForm({ settings }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrorMessage("");
 
     if (!purchaserName.trim()) {
@@ -59,14 +62,15 @@ export function TicketPurchaseForm({ settings }: Props) {
       return;
     }
 
+    submitting.current = true;
     setLoading(true);
 
     try {
       // Generate client idempotency key to prevent accidental double submission
-      const idempotencyKey =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      if (!idempotencyKey.current) {
+        if (!globalThis.crypto?.randomUUID) throw new Error("مرورگر شما امکان ثبت امن سفارش را ندارد.");
+        idempotencyKey.current = crypto.randomUUID();
+      }
 
       const res = await api.createOrder(
         {
@@ -75,7 +79,7 @@ export function TicketPurchaseForm({ settings }: Props) {
           purchaser_email: purchaserEmail.trim() || undefined,
           quantity,
         },
-        idempotencyKey
+        idempotencyKey.current
       );
 
       // Redirect directly to ZarinPal Sandbox StartPay
@@ -84,10 +88,12 @@ export function TicketPurchaseForm({ settings }: Props) {
       } else {
         setErrorMessage("آدرس هدایت به درگاه پرداخت دریافت نشد.");
         setLoading(false);
+        submitting.current = false;
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "خطایی در ثبت سفارش و اتصال به درگاه رخ داد.");
+      setErrorMessage((err.message || "خطایی در ثبت سفارش رخ داد.") + " در صورت نامشخص بودن نتیجه، پیش از خرید مجدد وضعیت پرداخت را بررسی کنید.");
       setLoading(false);
+      submitting.current = false;
     }
   };
 
@@ -109,12 +115,12 @@ export function TicketPurchaseForm({ settings }: Props) {
         </div>
 
         {/* Demo Price Notice Banner */}
-        {settings?.is_demo_price && (
+        {settings?.is_demo_price && settings.ticket_price_toman != null && (
           <div className="mb-8 p-4 rounded-2xl bg-[#C3A16A]/10 border border-[#C3A16A]/30 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
             <div className="text-sm text-[#262A25]">
               <span className="font-bold text-[#A85E48] block">محیط آزمایشی (Demo Mode):</span>
-              نرخ فعلی ({formatToman(unitPrice)}) به عنوان مقدار نمایشی جهت تست سیستم تنظیم شده و درگاه روی بستر تستی زرین‌پال (Sandbox) فعالیت می‌کند.
+              نرخ فعلی ({formatToman(unitPrice)}) یک مقدار آزمایشی است. وضعیت درگاه به تنظیمات محیط بستگی دارد.
             </div>
           </div>
         )}
@@ -160,7 +166,7 @@ export function TicketPurchaseForm({ settings }: Props) {
                     تعداد بلیت ورودی
                   </label>
                   <span className="text-xs text-[#77756D]">
-                    نرخ هر بلیت: <span className="font-semibold text-[#203D33]">{formatToman(unitPrice)}</span> (برای هر نفر یک بلیت مجزا)
+                    نرخ هر بلیت: <span className="font-semibold text-[#203D33]">{settings?.ticket_price_toman != null ? formatToman(unitPrice) : "نامشخص"}</span> (برای هر نفر یک بلیت مجزا)
                   </span>
                 </div>
 
@@ -196,7 +202,7 @@ export function TicketPurchaseForm({ settings }: Props) {
                   مبلغ قابل پرداخت ({toPersianDigits(quantity)} بلیت):
                 </span>
                 <span className="text-xl font-extrabold text-[#203D33]">
-                  {formatToman(totalPrice)}
+                  {settings?.ticket_price_toman != null ? formatToman(totalPrice) : "نامشخص"}
                 </span>
               </div>
             </div>
@@ -246,7 +252,7 @@ export function TicketPurchaseForm({ settings }: Props) {
                 {/* Email (Optional) */}
                 <div className="sm:col-span-2">
                   <label htmlFor="purchaser_email" className="block text-xs font-semibold text-[#262A25] mb-1.5">
-                    آدرس ایمیل <span className="text-xs text-[#77756D] font-normal">(اختیاری - جهت دریافت نسخه دیجیتال بلیت)</span>
+                    آدرس ایمیل <span className="text-xs text-[#77756D] font-normal">(اختیاری)</span>
                   </label>
                   <input
                     id="purchaser_email"
@@ -295,7 +301,7 @@ export function TicketPurchaseForm({ settings }: Props) {
                 </>
               ) : (
                 <>
-                  <span>تأیید و پرداخت {formatToman(totalPrice)}</span>
+                  <span>{settings?.ticket_price_toman != null ? `تأیید و پرداخت ${formatToman(totalPrice)}` : "قیمت در دسترس نیست"}</span>
                   <ArrowLeft className="w-5 h-5 text-[#C3A16A]" />
                 </>
               )}

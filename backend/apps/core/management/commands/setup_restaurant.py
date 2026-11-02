@@ -1,9 +1,9 @@
 import os
-import secrets
 from apps.accounts.models import StaffProfile, StaffRole
 from apps.core.models import RestaurantSettings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 User = get_user_model()
 
@@ -29,6 +29,7 @@ class Command(BaseCommand):
             help="Check-in staff password (only used when initially creating user)",
         )
 
+    @transaction.atomic
     def handle(self, *args, **options):
         self.stdout.write("Initializing Restaurant Singleton Settings...")
         settings_obj = RestaurantSettings.get_settings()
@@ -43,9 +44,10 @@ class Command(BaseCommand):
         admin_password = (
             options["admin_password"]
             or os.getenv("INITIAL_ADMIN_PASSWORD")
-            or "AdminSecret123!"
         )
 
+        if not User.objects.filter(username=admin_username).exists() and not admin_password:
+            raise CommandError("Set INITIAL_ADMIN_PASSWORD before creating the administrator.")
         admin_user, created = User.objects.get_or_create(
             username=admin_username,
             defaults={
@@ -72,21 +74,17 @@ class Command(BaseCommand):
                 )
             )
 
-        profile, _ = StaffProfile.objects.get_or_create(
-            user=admin_user,
-            defaults={"role": StaffRole.SUPER_ADMIN, "display_name": "مدیر کل سیستم"},
-        )
-        if profile.role != StaffRole.SUPER_ADMIN:
-            profile.role = StaffRole.SUPER_ADMIN
-            profile.save(update_fields=["role"])
+        if created:
+            StaffProfile.objects.create(user=admin_user, role=StaffRole.SUPER_ADMIN, display_name="مدیر کل سیستم")
 
         staff_username = options["staff_username"]
         staff_password = (
             options["staff_password"]
             or os.getenv("INITIAL_STAFF_PASSWORD")
-            or "StaffSecret123!"
         )
 
+        if not User.objects.filter(username=staff_username).exists() and not staff_password:
+            raise CommandError("Set INITIAL_STAFF_PASSWORD before creating the scanner.")
         staff_user, s_created = User.objects.get_or_create(
             username=staff_username,
             defaults={
@@ -112,13 +110,5 @@ class Command(BaseCommand):
                 )
             )
 
-        s_profile, _ = StaffProfile.objects.get_or_create(
-            user=staff_user,
-            defaults={
-                "role": StaffRole.STAFF_SCANNER,
-                "display_name": "مسئول گیت ورودی",
-            },
-        )
-        if s_profile.role != StaffRole.STAFF_SCANNER:
-            s_profile.role = StaffRole.STAFF_SCANNER
-            s_profile.save(update_fields=["role"])
+        if s_created:
+            StaffProfile.objects.create(user=staff_user, role=StaffRole.STAFF_SCANNER, display_name="مسئول گیت ورودی")

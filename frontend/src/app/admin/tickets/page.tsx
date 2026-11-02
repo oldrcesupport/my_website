@@ -15,7 +15,7 @@ export default function AdminTicketsPage() {
   const fetchTickets = () => {
     setLoading(true);
     setErrorMsg("");
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
+    const token = "";
     api.getAdminTickets(token, {
       search: search.trim() || undefined,
       status: statusFilter || undefined,
@@ -45,7 +45,7 @@ export default function AdminTicketsPage() {
       return;
     }
 
-    const token = localStorage.getItem("staff_token") || "";
+    const token = "";
     try {
       await api.cancelAdminTicket(token, ticketId);
       alert(`بلیت ${ticketNumber} با موفقیت لغو شد.`);

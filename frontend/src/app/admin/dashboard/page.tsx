@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
+    const token = "";
     api.getDashboardStats(token)
       .then((data) => {
         setStats(data);

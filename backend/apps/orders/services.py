@@ -4,6 +4,7 @@ from apps.business_time.services import BusinessTimeService
 from apps.core.models import RestaurantSettings
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.conf import settings as django_settings
 
 from .models import Order, OrderStatus
 
@@ -31,6 +32,8 @@ class OrderService:
                 return existing, recovered_token, False
 
         settings = RestaurantSettings.get_settings()
+        if django_settings.APP_ENV == "production" and (settings.is_demo_price or settings.ticket_price_toman <= 0):
+            raise ValidationError("قیمت واقعی بلیت هنوز تنظیم نشده است.")
         allowed, reason, _ = BusinessTimeService.is_checkout_allowed(
             settings_obj=settings
         )
@@ -76,6 +79,7 @@ class OrderService:
                 idempotency_key=idempotency_key or None,
                 frontend_origin=frontend_origin.strip(),
                 payment_deadline=payment_deadline,
+                business_day_end=boundary_utc,
             )
             order.set_guest_access_token(raw_access_token)
             order.save()

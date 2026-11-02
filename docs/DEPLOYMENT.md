@@ -1,51 +1,25 @@
-# Deployment & Operational Readiness Guide
+# Deployment and local setup
 
-## 1. Local Development Quickstart
+The application is **not ready for production**. The current container and
+Nginx configuration is a draft; required variables, setup, migration, TLS and
+backup/restore instructions and their verification limits are in
+[PRODUCTION_DRAFT.md](PRODUCTION_DRAFT.md). Do not enable live payments before
+resolving the provider-contract and operational blockers there.
 
-### Prerequisites
-- Docker & Docker Compose
-- Python 3.14 (or Python 3.12+)
-- Node.js 24+ & npm
+For local development, use Python 3.14, Node.js and PostgreSQL. Prepare your
+own development environment values from `.env.example`; generate independent
+keys and a database password, and never overwrite an existing environment file.
+Compose requires `DB_PASSWORD` in the shell or root `.env`; the backend reads
+`backend/.env`. Run `docker compose up -d db`, install backend requirements,
+run `python manage.py migrate`, and start Django on `127.0.0.1:8000`. Initial
+staff creation requires explicit credentials; no default password is provided.
+In `frontend`, run `npm ci` and `npm run dev`.
 
-### Step 1: Start PostgreSQL via Docker Compose
-```bash
-docker compose up -d db
-```
+Use the same browser origin for the UI and API, with the Next rewrite or a
+properly configured reverse proxy. The isolated browser sandbox helper under
+`backend/tests` requires `APP_ENV=testing` and a `codex_browser_` database; it
+is excluded from the backend container and is not a production configuration.
 
-### Step 2: Initialize Backend
-```bash
-cd backend
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py setup_restaurant
-python manage.py runserver 0.0.0.0:8000
-```
-
-### Step 3: Initialize Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Frontend runs at `http://localhost:3000`, communicating with backend at `http://localhost:8000`.
-
----
-
-## 2. Production Checklist (Pre-Launch Gates)
-Before transitioning to Production:
-1. `APP_ENV` set to `production`.
-2. `DEBUG=False`.
-3. `LIVE_PAYMENTS_ENABLED=True`.
-4. `ZARINPAL_ENV=production`.
-5. `ZARINPAL_MERCHANT_ID` set to the verified 36-character merchant UUID from ZarinPal panel.
-6. `IS_DEMO_PRICE=False` and actual agreed ticket price set in Toman.
-7. `RESTAURANT_NAME`, `RESTAURANT_ADDRESS`, and `RESTAURANT_PHONE` populated with real brand details.
-8. HTTPS enforced (`SECURE_SSL_REDIRECT=True`, `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`).
-9. `QR_ENCRYPTION_KEY` configured with a 32-byte base64-encoded random key.
-
+Never point mock payments or browser test helpers at production data. Sandbox
+has been exercised locally, not as a deployed TLS system. Localhost callback
+URLs work only in the local browser flow and are not a public deployment URL.

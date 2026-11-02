@@ -6,7 +6,7 @@ export interface PublicRestaurantSettings {
   phone: string;
   currency_unit: string;
   currency_label: string;
-  ticket_price_toman: number;
+  ticket_price_toman: number | null;
   is_demo_price: boolean;
   sales_enabled: boolean;
   business_timezone: string;
@@ -34,7 +34,6 @@ export interface OrderResponse {
   business_date: string;
   payment_deadline: string;
   payment_redirect_url: string;
-  guest_access_token: string;
 }
 
 export interface TicketPass {

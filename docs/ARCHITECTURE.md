@@ -1,4 +1,5 @@
 # Architecture Specification: Modular Monolith
+> **2026-11-02 update:** Current staff authentication is session and CSRF; order boundary snapshots and the draft production stack were added. See API.md and SESSION_AUTH_MIGRATION.md. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ## 1. System Overview
 The platform follows a clean **Modular Monolith** architecture pattern. It couples a robust Python/Django backend with a modern Next.js/React frontend, backed by PostgreSQL.

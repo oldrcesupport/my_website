@@ -1,4 +1,5 @@
 # Security Remediation Plan and Specification
+> **2026-11-02 update:** This audit, plan or report records an earlier snapshot; its claims and test results are historical, not current production-readiness evidence. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 **Project:** oldrcesupport/my_website  
 **Standard:** OWASP Top 10 / Application Security & Financial Transaction Isolation  
 
@@ -26,7 +27,7 @@
    - The raw token is encrypted using AES-128-CBC/Fernet via `QRCryptoService` and stored in `order.encrypted_guest_token`.
 2. **Delivery & Session Binding:**
    - Server sets an `HttpOnly`, `SameSite=Lax`, `Path=/` cookie named `guest_token_<order_public_id>` (and generic `guest_access_token`).
-   - The creator receives the token once in the creation response header / payload.
+   - Current behavior: the creator receives HttpOnly cookies; the guest ownership token is not returned in the JSON response.
 3. **Strict Authorization Verification:**
    - For every access to `/orders/<id>/status/`, `/orders/<id>/tickets/`, or `/tickets/<id>/qr.png`:
      ```python

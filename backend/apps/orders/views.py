@@ -1,6 +1,7 @@
 from apps.accounts.permissions import IsAdminUserRole
 from apps.payments.services import PaymentService
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.db.models import Q
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -44,6 +45,8 @@ class CreateOrderView(APIView):
         data = serializer.validated_data
 
         idempotency_key = request.headers.get("Idempotency-Key", "").strip() or None
+        if idempotency_key and len(idempotency_key) > 128:
+            return Response({"error": "شناسه درخواست بیش از حد طولانی است."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             order, guest_token, is_created = OrderService.create_order(
@@ -58,6 +61,17 @@ class CreateOrderView(APIView):
                 {"error": str(e.message if hasattr(e, "message") else e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except IntegrityError:
+            # A concurrent request may have inserted the same unique key after
+            # the initial lookup. Do not disclose ownership or start payment.
+            if idempotency_key and Order.objects.filter(idempotency_key=idempotency_key).exists():
+                return Response({"error": "این درخواست قبلاً ثبت شده است."}, status=status.HTTP_409_CONFLICT)
+            raise
+
+        if not is_created:
+            # An idempotency key is not an ownership credential. Do not disclose
+            # the existing order or create another payment session for it.
+            return Response({"error": "این درخواست قبلاً ثبت شده است."}, status=status.HTTP_409_CONFLICT)
 
         # Initiate payment strictly using configured PAYMENT_CALLBACK_URL (no client-header poisoning)
         pay_success, redirect_url, attempt, pay_err = PaymentService.initiate_payment(order)
@@ -79,7 +93,6 @@ class CreateOrderView(APIView):
             "business_date": str(order.business_date),
             "payment_deadline": order.payment_deadline.isoformat(),
             "payment_redirect_url": redirect_url,
-            "guest_access_token": guest_token,
         }
 
         from django.conf import settings

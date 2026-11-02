@@ -1,4 +1,5 @@
 # Business Time & Day Boundary Calculations
+> **2026-11-02 update:** New orders snapshot business_day_end; legacy null values use the current cutoff. The business timezone is fixed to Asia/Tehran. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ## 1. Principles
 - **Centralized Service**: All business-time calculations must flow through `BusinessTimeService`. No ad-hoc `datetime.now()` or timezone manipulations may exist in views or models.

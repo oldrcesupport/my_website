@@ -1,4 +1,5 @@
 # Entity Relationship Diagram (ERD)
+> **2026-11-02 update:** The order model also has a nullable business_day_end snapshot; this diagram predates migration 0003. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ```mermaid
 erDiagram

@@ -1,4 +1,5 @@
 # جامع‌ترین ممیزی کد و معماری فنی سامانه (Complete Code Audit)
+> **2026-11-02 update:** This audit, plan or report records an earlier snapshot; its claims and test results are historical, not current production-readiness evidence. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 **پروژه:** سامانه فروش و پذیرش بلیت سالن موسیقی زنده رستوران  
 **مخزن:** https://github.com/oldrcesupport/my_website  
 **تاریخ گزارش:** شنبه ۱۰ آبان ۱۴۰۵ (31 اکتبر 2026)  

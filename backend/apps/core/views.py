@@ -2,6 +2,8 @@ from apps.accounts.permissions import IsAdminUserRole
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import connection, DatabaseError
+from django.http import JsonResponse
 
 from .models import AuditLog, RestaurantSettings
 from .serializers import (
@@ -10,6 +12,16 @@ from .serializers import (
     PublicRestaurantSettingsSerializer,
 )
 from .services import log_audit
+
+
+def health(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except DatabaseError:
+        return JsonResponse({"status": "unavailable"}, status=503)
+    return JsonResponse({"status": "ok"})
 
 
 class PublicSettingsView(APIView):

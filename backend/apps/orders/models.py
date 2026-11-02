@@ -61,6 +61,7 @@ class Order(models.Model):
         max_length=255, blank=True, default="", verbose_name="آدرس مبدأ فرانت‌اند"
     )
     payment_deadline = models.DateTimeField(db_index=True, verbose_name="مهلت پرداخت")
+    business_day_end = models.DateTimeField(null=True, blank=True, verbose_name="پایان روز کاری هنگام ثبت سفارش")
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     paid_at = models.DateTimeField(null=True, blank=True)

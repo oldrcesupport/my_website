@@ -27,9 +27,9 @@ async function getSettings(): Promise<PublicRestaurantSettings | null> {
 export default async function HomePage() {
   const settings = await getSettings();
 
-  const restaurantName = settings?.restaurant_name || "نام رستوران";
+  const restaurantName = settings?.restaurant_name && settings.restaurant_name !== "نام رستوران" ? settings.restaurant_name : "بلیت موسیقی زنده";
   const tagline = settings?.tagline || "تجربه موسیقی زنده در فضایی صمیمی و فاخر";
-  const ticketPrice = settings?.ticket_price_toman || 100000;
+  const ticketPrice = settings?.ticket_price_toman ?? undefined;
 
   return (
     <div className="flex flex-col min-h-screen">

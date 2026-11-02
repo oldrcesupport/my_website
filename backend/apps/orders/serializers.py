@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import re
 
 from .models import Order
 
@@ -17,7 +18,7 @@ class CreateOrderSerializer(serializers.Serializer):
         arabic_digits = "٠١٢٣٤٥٦٧٨٩"
         for i in range(10):
             cleaned = cleaned.replace(persian_digits[i], str(i)).replace(arabic_digits[i], str(i))
-        if len(cleaned) < 10:
+        if not re.fullmatch(r"(?:\+98|0)?9[0-9]{9}", cleaned):
             raise serializers.ValidationError("شماره تلفن وارد شده نامعتبر است.")
         return cleaned
 

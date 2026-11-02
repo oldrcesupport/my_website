@@ -1,4 +1,5 @@
 # گزارش جامع مهندسی کیفیت، رفع نقص‌ها و ارزیابی نهایی سامانه
+> **2026-11-02 update:** This audit, plan or report records an earlier snapshot; its claims and test results are historical, not current production-readiness evidence. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 ## Final Quality Engineering, Forensic Bug Audit & System Verification Report
 **پروژه:** oldrcesupport/my_website  
 **مخزن:** https://github.com/oldrcesupport/my_website  

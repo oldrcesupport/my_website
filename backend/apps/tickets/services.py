@@ -4,7 +4,8 @@ import uuid
 
 import qrcode
 from apps.business_time.services import BusinessTimeService
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderStatus
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from .crypto import QRCryptoService
@@ -15,7 +16,8 @@ class TicketService:
     @classmethod
     def generate_ticket_number(cls, business_date) -> str:
         date_str = business_date.strftime("%Y%m%d")
-        random_suffix = uuid.uuid4().hex[:6].upper()
+        # Six hexadecimal digits collide readily at modest daily volumes.
+        random_suffix = uuid.uuid4().hex[:12].upper()
         return f"TKT-{date_str}-{random_suffix}"
 
     @classmethod
@@ -24,16 +26,19 @@ class TicketService:
         Atomically issues exactly order.quantity separate Ticket records,
         each with its own independent, unpredictable QR credential.
         """
-        if order.tickets.exists():
-            return list(order.tickets.all())
-
         now_utc = paid_at or BusinessTimeService.get_now_utc()
-        valid_until_utc = BusinessTimeService.get_business_day_boundary_utc(
-            order.business_date
-        )
+        valid_until_utc = order.business_day_end or BusinessTimeService.get_business_day_boundary_utc(order.business_date)
 
         tickets_to_create = []
         with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=order.pk)
+            if order.status != OrderStatus.PAID:
+                raise ValidationError("Tickets can only be issued for a paid order.")
+            existing = list(order.tickets.all())
+            if existing:
+                if len(existing) != order.quantity:
+                    raise ValidationError("Existing ticket count does not match order quantity.")
+                return existing
             for _ in range(order.quantity):
                 raw_token = QRCryptoService.generate_token()
                 token_hash = QRCryptoService.hash_token(raw_token)

@@ -14,6 +14,15 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   const headers = new Headers(options.headers || {});
+  // Authentication is carried by the HttpOnly session cookie. A readable CSRF
+  // cookie is a non-secret anti-forgery token, not an authentication token.
+  headers.delete("Authorization");
+  if (options.method && !["GET", "HEAD", "OPTIONS"].includes(options.method.toUpperCase())) {
+    await fetch(`${API_BASE}/api/v1/auth/csrf/`, { credentials: "include", cache: "no-store" });
+    const csrf = document.cookie.split("; ").find((part) => part.startsWith("csrftoken="))?.split("=")[1];
+    if (!csrf) throw new Error("امکان تأیید امنیت درخواست وجود ندارد. صفحه را تازه‌سازی کنید.");
+    headers.set("X-CSRFToken", decodeURIComponent(csrf));
+  }
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
@@ -26,10 +35,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (!res.ok) {
     let errorDetail = `خطای سرور (${res.status})`;
+    let errorBody: unknown;
     try {
       const text = await res.text();
       try {
         const data = JSON.parse(text);
+        errorBody = data;
         errorDetail =
           data.detail ||
           data.error ||
@@ -44,6 +55,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     }
     const err = new Error(errorDetail);
     (err as any).status = res.status;
+    (err as any).body = errorBody;
     throw err;
   }
 
@@ -98,7 +110,7 @@ export const api = {
 
   // Admin Auth
   login: (username: string, password: string) =>
-    request<{ token: string; user: StaffUser }>("/api/v1/auth/login/", {
+    request<{ user: StaffUser }>("/api/v1/auth/login/", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     }),

@@ -17,8 +17,7 @@ class QRCryptoService:
     def _get_cipher(cls) -> Fernet:
         key = getattr(settings, "QR_ENCRYPTION_KEY", None)
         if not key:
-            # Fallback for dev/tests if key was omitted
-            key = Fernet.generate_key().decode()
+            raise ValueError("QR_ENCRYPTION_KEY must be configured and stable.")
         if isinstance(key, str):
             key = key.encode("utf-8")
         return Fernet(key)
@@ -53,10 +52,7 @@ class QRCryptoService:
     @classmethod
     def build_qr_payload(cls, raw_token: str) -> str:
         """
-        Builds the payload embedded in the QR image.
-        Contains strictly the token URL without any PII (no name, phone, or price).
+        The QR is a one-time admission credential, not a web link. Keeping it
+        out of URLs avoids browser history, referrer and access-log leakage.
         """
-        frontend_url = getattr(
-            settings, "FRONTEND_URL", "http://localhost:3000"
-        ).rstrip("/")
-        return f"{frontend_url}/verify/{raw_token}"
+        return raw_token

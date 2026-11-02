@@ -58,6 +58,7 @@ export default function StaffScannerPage() {
   const [token, setToken] = useState<string>("");
   const [user, setUser] = useState<StaffUser | null>(null);
   const [authChecking, setAuthChecking] = useState<boolean>(true);
+  const [authError, setAuthError] = useState("");
 
   // Scanner state
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -78,20 +79,17 @@ export default function StaffScannerPage() {
 
   // Check login state
   useEffect(() => {
-    const savedToken = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
-    if (!savedToken) {
-      setAuthChecking(false);
-      return;
-    }
-    setToken(savedToken);
+    const savedToken = "";
 
     api.getMe(savedToken)
       .then((u) => {
         setUser(u);
         loadHistory(savedToken);
       })
-      .catch(() => {
-        localStorage.removeItem("staff_token");
+      .catch((err) => {
+        if (err.status !== 401 && err.status !== 403) {
+          setAuthError("امکان بررسی نشست پرسنل به دلیل خطای ارتباط با سرور وجود ندارد.");
+        }
         setToken("");
       })
       .finally(() => setAuthChecking(false));
@@ -219,7 +217,10 @@ export default function StaffScannerPage() {
     } catch (err: any) {
       let resPayload: CheckInScanResult;
 
-      if (!err.status || err.name === "TypeError" || err.message?.includes("fetch") || err.message?.includes("network")) {
+      const businessResults = ["ALREADY_USED", "INVALID_TOKEN", "EXPIRED", "CANCELLED", "ORDER_UNPAID"];
+      if (err.body && businessResults.includes(err.body.result)) {
+        resPayload = err.body as CheckInScanResult;
+      } else if (!err.status || err.name === "TypeError" || err.message?.includes("fetch") || err.message?.includes("network")) {
         // Network connection error / offline
         resPayload = {
           result: "NETWORK_ERROR",
@@ -237,27 +238,10 @@ export default function StaffScannerPage() {
           result: "AUTH_ERROR",
           message: "نشست پرسنلی منقضی شده یا دسترسی مجاز نیست. لطفاً مجدداً وارد حساب کاربری شوید.",
         };
-      } else if (err.status === 409) {
-        resPayload = {
-          result: "ALREADY_USED",
-          message: err.message || "این بلیت قبلاً پذیرش شده و قابل استفاده مجدد نیست.",
-        };
-      } else if (err.status === 404) {
-        resPayload = {
-          result: "INVALID_TOKEN",
-          message: "بارکد اسکن‌شده در سامانه یافت نشد و نامعتبر است.",
-        };
-      } else if (err.status === 400) {
-        const msg = String(err.message || "");
-        const resultType = msg.includes("منقضی") ? "EXPIRED" : msg.includes("لغو") ? "CANCELLED" : "ORDER_UNPAID";
-        resPayload = {
-          result: resultType,
-          message: msg || "بلیت منقضی شده یا وضعیت سفارش پرداخت‌نشده است.",
-        };
       } else {
         resPayload = {
-          result: "INVALID_TOKEN",
-          message: err.message || "خطای اعتبارسنجی بلیت",
+          result: "SERVER_ERROR",
+          message: err.message || "امکان بررسی بلیت وجود ندارد؛ دوباره تلاش کنید.",
         };
       }
 
@@ -298,6 +282,10 @@ export default function StaffScannerPage() {
     );
   }
 
+  if (authError) {
+    return <div role="alert" className="min-h-screen p-8 text-center">{authError} <button className="underline" onClick={() => window.location.reload()}>تلاش مجدد</button></div>;
+  }
+
   // Not logged in -> Show login redirect
   if (!user) {
     return (
@@ -332,12 +320,12 @@ export default function StaffScannerPage() {
     <div className="min-h-screen bg-[#F5F0E7] pb-16">
       {/* Top Staff Navbar */}
       <header className="bg-[#203D33] text-[#FFFCF6] px-4 py-4 border-b border-[#294D40]">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#C3A16A] text-[#203D33] flex items-center justify-center font-bold">
+        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-[#C3A16A] text-[#203D33] flex items-center justify-center font-bold">
               <QrCode className="w-5 h-5 text-[#203D33]" />
             </div>
-            <div>
+            <div className="min-w-0 break-words">
               <span className="text-sm font-bold block">گیت پذیرش سالن موسیقی</span>
               <span className="text-xs text-[#E6DED1]/80 block">
                 پرسنل: {user.display_name || user.username}
@@ -345,7 +333,7 @@ export default function StaffScannerPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(user.is_admin || user.is_super_admin) && (
               <Link
                 href="/admin/dashboard"
@@ -361,10 +349,14 @@ export default function StaffScannerPage() {
               صفحه اصلی
             </Link>
             <button
-              onClick={() => {
-                localStorage.removeItem("staff_token");
-                setUser(null);
-                setToken("");
+              onClick={async () => {
+                try {
+                  await api.logout("");
+                  setUser(null);
+                  setToken("");
+                } catch {
+                  window.alert("خروج انجام نشد؛ دوباره تلاش کنید.");
+                }
               }}
               className="text-xs px-3 py-1.5 rounded-lg bg-[#A85E48]/80 hover:bg-[#A85E48] text-[#FFFCF6]"
             >

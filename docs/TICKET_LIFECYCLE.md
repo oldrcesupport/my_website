@@ -1,4 +1,5 @@
 # Ticket Lifecycle & Entrance Redemption Specification
+> **2026-11-02 update:** New QR payloads are raw one-time credentials rather than URLs; they are returned to authorized owners in qr_payload and encoded in qr_data_uri. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ## 1. Ticket States & Transitions
 

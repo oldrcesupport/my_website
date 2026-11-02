@@ -1,4 +1,5 @@
 # Database Specification & Constraints
+> **2026-11-02 update:** Orders now include nullable business_day_end (migration 0003). Existing rows remain null; migration and isolated backup tests are described in ENGINEERING_PROGRESS.md. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ## 1. Engine & Database Rules
 - **Engine**: PostgreSQL 18.

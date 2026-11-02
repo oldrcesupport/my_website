@@ -12,11 +12,10 @@ class BusinessTimeService:
 
     @classmethod
     def get_timezone(cls, settings_obj: RestaurantSettings | None = None) -> ZoneInfo:
-        settings = settings_obj or RestaurantSettings.get_settings()
-        try:
-            return ZoneInfo(settings.business_timezone)
-        except Exception:
-            return ZoneInfo("Asia/Tehran")
+        # The business timezone is part of the admission rule, not an
+        # operator-controlled display preference. Legacy rows may contain a
+        # different value, but must never change ticket validity.
+        return ZoneInfo("Asia/Tehran")
 
     @classmethod
     def get_now_utc(cls) -> datetime:

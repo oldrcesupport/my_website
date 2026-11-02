@@ -12,6 +12,20 @@ from apps.payments.services import PaymentService
 
 @pytest.mark.django_db
 class TestPaymentWorkflows:
+    def test_order_boundary_is_preserved_when_configuration_changes(self, monkeypatch):
+        from datetime import time
+        from apps.core.models import RestaurantSettings
+
+        monkeypatch.setattr("apps.payments.services.get_payment_adapter", lambda: MockPaymentAdapter())
+        order, _, _ = OrderService.create_order("خریدار", "09121111111", quantity=1)
+        original_end = order.business_day_end
+        settings_obj = RestaurantSettings.get_settings()
+        settings_obj.business_day_cutoff = time(12, 0)
+        settings_obj.save(update_fields=["business_day_cutoff"])
+        _, _, attempt, _ = PaymentService.initiate_payment(order)
+        assert PaymentService.process_callback(attempt.authority, "OK")[0] == "SUCCESS"
+        assert order.tickets.get().valid_until == original_end
+
     def test_toman_to_rial_conversion(self):
         # 100,000 Toman must strictly equal 1,000,000 Rial at the provider boundary
         toman = 100000

@@ -21,10 +21,7 @@ import { OrderStatusResponse } from "@/types";
 function PaymentReturnContent() {
   const searchParams = useSearchParams();
 
-  const urlStatus = searchParams.get("status")?.toLowerCase() || "";
   const orderId = searchParams.get("order_id");
-  const authority = searchParams.get("auth");
-  const urlRefId = searchParams.get("ref_id");
 
   const [orderData, setOrderData] = useState<OrderStatusResponse | null>(null);
   const [loading, setLoading] = useState(Boolean(orderId));
@@ -75,15 +72,13 @@ function PaymentReturnContent() {
 
   // Authoritative State: Strictly depend on verified database state from backend, NEVER query string alone
   const isVerifiedPaid = orderData?.status === "PAID";
-  const isLateReview = orderData?.status === "PAID_LATE_REVIEW" || urlStatus === "late_review";
-  const isPending = orderData?.status === "PENDING_PAYMENT";
+  const isLateReview = orderData?.status === "PAID_LATE_REVIEW";
+  const isPending = orderData?.status === "PENDING_PAYMENT" || (!loading && !orderData);
   const isFailed =
-    (!loading && !isVerifiedPaid && !isLateReview && !isPending) ||
     orderData?.status === "PAYMENT_FAILED" ||
-    orderData?.status === "CANCELLED" ||
-    Boolean(fetchError);
+    orderData?.status === "CANCELLED";
 
-  const displayRefId = orderData?.reference_id || urlRefId;
+  const displayRefId = orderData?.reference_id;
 
   if (loading) {
     return (
@@ -139,7 +134,7 @@ function PaymentReturnContent() {
             {isLateReview &&
               "مبلغ کسر شده است، اما به دلیل عبور از ساعت پایان روز کاری سالن، بلیت صادر نگردید و سفارش جهت استرداد وجه به مدیریت ارجاع شد."}
             {isPending &&
-              "تراکنش شما در حال حاضر در حال پردازش در شبکه بانکی است. لطفاً صفحه را تازه‌سازی نمایید."}
+              (fetchError ? "امکان دریافت وضعیت سفارش وجود ندارد. پیش از خرید دوباره، وضعیت را بررسی کنید." : "وضعیت قطعی پرداخت هنوز مشخص نیست. لطفاً دوباره بررسی کنید.")}
             {isFailed &&
               (fetchError ||
                 "فرآیند پرداخت در درگاه بانکی تکمیل نشد یا توسط کاربر لغو گردید. هیچ بلیتی برای این سفارش صادر نشده است.")}

@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 from datetime import datetime
 
 from apps.business_time.services import BusinessTimeService
@@ -59,9 +60,11 @@ class CheckInService:
             # 3. Lookup by ticket public UUID
             if not ticket:
                 try:
-                    ticket = ticket_qs.filter(public_id=raw_input).first()
-                except Exception:
-                    pass
+                    public_id = uuid.UUID(raw_input)
+                except ValueError:
+                    public_id = None
+                if public_id:
+                    ticket = ticket_qs.filter(public_id=public_id).first()
 
             if not ticket:
                 record = CheckInRecord.objects.create(
@@ -88,9 +91,13 @@ class CheckInService:
                     scanner_device_id=scanner_device_id,
                     notes=f"Previously used at {ticket.used_at}",
                 )
+                prior_time = (
+                    f" در ساعت {BusinessTimeService.to_tehran(ticket.used_at).strftime('%H:%M:%S')}"
+                    if ticket.used_at else ""
+                )
                 return (
                     CheckInResult.ALREADY_USED,
-                    f"این بلیت قبلاً در ساعت {ticket.used_at.strftime('%H:%M:%S')} پذیرش شده است و امکان استفاده مجدد ندارد.",
+                    f"این بلیت قبلاً{prior_time} پذیرش شده است و امکان استفاده مجدد ندارد.",
                     ticket,
                     record,
                     ticket.used_at,
@@ -129,7 +136,7 @@ class CheckInService:
                 )
 
             # Check date and time validity window
-            if now > ticket.valid_until:
+            if now >= ticket.valid_until:
                 record = CheckInRecord.objects.create(
                     ticket=ticket,
                     staff_user=staff_user,

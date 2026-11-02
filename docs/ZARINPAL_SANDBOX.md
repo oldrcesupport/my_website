@@ -1,5 +1,13 @@
 # ZarinPal v4 REST API Sandbox Integration Specification
 
+> Verification on 2026-11-02: an isolated local checkout used the actual
+> sandbox with the all-zero test merchant. The gateway displayed 1,000,000 IRR
+> for 100,000 Toman, returned code 100 to server-side verification, and returned
+> code 101 with a reference on a repeated provider verification. A separate
+> cancellation issued no tickets; a two-ticket purchase displayed 2,000,000 IRR
+> and issued two tickets. These are sandbox observations, not a guarantee of
+> current production behavior or a substitute for provider confirmation.
+
 ## 1. Provider Endpoints
 
 ### 1.1 Development Sandbox Endpoints
@@ -20,7 +28,9 @@
 ## 2. Currency Conversion: Toman to Rial Rule
 The internal application currency and database representation is integer **Toman**.
 
-ZarinPal's default numeric amount standard in REST API v4 is **Rial**.
+This implementation sends **Rial** explicitly. That choice was verified against
+the sandbox in the scenarios above; the production verification contract still
+requires confirmation.
 
 ```python
 # Absolute Provider Boundary Rule
@@ -31,7 +41,8 @@ amount_rial = amount_toman * 10
   `"amount": amount_rial`
 - When constructing the verification payload for `/verify.json`:
   `"amount": amount_rial`
-- **Verification Rule**: The amount passed to verify must exactly match the original Rial amount sent in the request.
+- **Current implementation**: verification sends the same Rial amount as the
+  request. Do not treat this sandbox observation as production certification.
 
 ---
 

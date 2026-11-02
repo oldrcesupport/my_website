@@ -1,8 +1,10 @@
 from apps.core.services import log_audit
 from django.contrib.auth import get_user_model, login, logout
 from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
+from django.utils.decorators import method_decorator
 from rest_framework import permissions, status
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,6 +19,12 @@ from .serializers import (
 User = get_user_model()
 
 
+@ensure_csrf_cookie
+def csrf_cookie(request):
+    return JsonResponse({"detail": "CSRF cookie set"})
+
+
+@method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -27,14 +35,12 @@ class LoginView(APIView):
         user = serializer.validated_data["user"]
 
         login(request, user)
-        token, _ = Token.objects.get_or_create(user=user)
 
         log_audit(user, "STAFF_LOGIN", "User", user.id)
 
         user_data = StaffUserSerializer(user).data
         return Response(
             {
-                "token": token.key,
                 "user": user_data,
             }
         )
@@ -44,7 +50,6 @@ class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        Token.objects.filter(user=request.user).delete()
         logout(request)
         return Response({"message": "خروج موفقیت‌آمیز بود."})
 
@@ -70,6 +75,9 @@ class StaffListCreateView(APIView):
         serializer = StaffCreateUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+
+        if data.get("role") == StaffRole.SUPER_ADMIN and not request.user.is_superuser:
+            return Response({"error": "تنها ابرکاربر می‌تواند مدیر ارشد ایجاد کند."}, status=status.HTTP_403_FORBIDDEN)
 
         with transaction.atomic():
             user = User.objects.create_user(
@@ -115,6 +123,14 @@ class StaffDetailUpdateView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+
+        target_profile = getattr(user, "staff_profile", None)
+        if not request.user.is_superuser and (
+            user.is_superuser
+            or (target_profile and target_profile.is_super_admin)
+            or data.get("role") == StaffRole.SUPER_ADMIN
+        ):
+            return Response({"error": "تغییر حساب مدیر ارشد مجاز نیست."}, status=status.HTTP_403_FORBIDDEN)
 
         with transaction.atomic():
             if "username" in data:

@@ -9,10 +9,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 APP_ENV = os.getenv("APP_ENV", "development").lower()
+if APP_ENV not in {"development", "testing", "staging", "production"}:
+    raise RuntimeError("CONFIGURATION ERROR: unsupported APP_ENV")
 DEBUG = os.getenv("DEBUG", "true").lower() == "true"
-SECRET_KEY = os.getenv(
-    "SECRET_KEY", "dev-insecure-secret-key-change-in-production-only-abcdef1234567890"
-)
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 ALLOWED_HOSTS = [
     h.strip()
@@ -83,7 +83,7 @@ DATABASES = {
         "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
         "NAME": os.getenv("DB_NAME", "restaurant_ticketing"),
         "USER": os.getenv("DB_USER", "ticketing_user"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "ticketing_secret"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
         "CONN_MAX_AGE": 60,
@@ -139,17 +139,12 @@ CSRF_TRUSTED_ORIGINS = [
         "CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
     ).split(",")
     if origin.strip()
-] + [
-    "http://192.168.1.101:3000",
-    "http://192.168.1.101:8000",
-    "http://0.0.0.0:3000",
-    "http://0.0.0.0:8000",
 ]
 
 # REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -194,12 +189,40 @@ PAYMENT_CALLBACK_URL = os.getenv(
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # Cryptography Key for QR tokens
-QR_ENCRYPTION_KEY = os.getenv(
-    "QR_ENCRYPTION_KEY", "qwHiMJaVJrDf0tF73NgSWxLEjy_CSXyllr840hPSE2A="
-)
+QR_ENCRYPTION_KEY = os.getenv("QR_ENCRYPTION_KEY", "")
 
 # Production Safety Assertion
 if APP_ENV == "production":
+    from cryptography.fernet import Fernet
+    from urllib.parse import urlparse
+    from uuid import UUID
+    from hashlib import sha256
+
+    if PAYMENT_PROVIDER != "zarinpal":
+        raise RuntimeError("CONFIGURATION ERROR: production requires the ZarinPal provider")
+
+    for name in ("SECRET_KEY", "QR_ENCRYPTION_KEY", "DB_NAME", "DB_USER", "DB_PASSWORD", "ALLOWED_HOSTS", "FRONTEND_URL", "PAYMENT_CALLBACK_URL"):
+        value = os.getenv(name, "")
+        if not value or "replace" in value.lower() or sha256(value.encode()).hexdigest() in {'ee73a1e820000494fc091ac70c4f504cd6245ae4b5e93cd7b2ef4928a231d380', '57423305873cf9d57e762634740ba1bdbac347751c9f1305e484ff31f0eb702d'}:
+            raise RuntimeError(f"CONFIGURATION ERROR: provide a secure {name} in production")
+    if len(SECRET_KEY) < 50 or SECRET_KEY.startswith("dev-") or "*" in ALLOWED_HOSTS:
+        raise RuntimeError("CONFIGURATION ERROR: insecure SECRET_KEY or ALLOWED_HOSTS")
+    try:
+        Fernet(QR_ENCRYPTION_KEY.encode())
+    except (ValueError, TypeError):
+        raise RuntimeError("CONFIGURATION ERROR: invalid QR_ENCRYPTION_KEY") from None
+    if any(urlparse(url).scheme != "https" for url in (FRONTEND_URL, PAYMENT_CALLBACK_URL)):
+        raise RuntimeError("CONFIGURATION ERROR: production URLs must use HTTPS")
+    frontend_origin = urlparse(FRONTEND_URL)
+    callback_origin = urlparse(PAYMENT_CALLBACK_URL)
+    if not frontend_origin.hostname or (frontend_origin.scheme, frontend_origin.netloc) != (callback_origin.scheme, callback_origin.netloc):
+        raise RuntimeError("CONFIGURATION ERROR: frontend and callback must share the same HTTPS origin")
+    if FRONTEND_URL.rstrip("/") not in CSRF_TRUSTED_ORIGINS:
+        raise RuntimeError("CONFIGURATION ERROR: include FRONTEND_URL in CSRF_TRUSTED_ORIGINS")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     if DEBUG:
         raise RuntimeError("SECURITY ERROR: DEBUG cannot be True in production!")
     if IS_DEMO_PRICE:
@@ -218,3 +241,8 @@ if APP_ENV == "production":
         raise RuntimeError(
             "CONFIGURATION ERROR: Production requires a valid ZarinPal Merchant ID!"
         )
+    try:
+        if UUID(ZARINPAL_MERCHANT_ID).int == 0:
+            raise ValueError
+    except ValueError:
+        raise RuntimeError("CONFIGURATION ERROR: invalid ZarinPal Merchant ID") from None

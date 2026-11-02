@@ -9,7 +9,8 @@ import { Lock, User, KeyRound, Loader2, AlertCircle, Music2 } from "lucide-react
 function AdminLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/admin/dashboard";
+  const requestedPath = searchParams.get("redirect") || "";
+  const redirectPath = requestedPath.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/admin/dashboard";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -22,9 +23,7 @@ function AdminLoginContent() {
     setLoading(true);
 
     try {
-      const res = await api.login(username.trim(), password);
-      localStorage.setItem("staff_token", res.token);
-      localStorage.setItem("staff_user", JSON.stringify(res.user));
+      await api.login(username.trim(), password);
       router.push(redirectPath);
     } catch (err: any) {
       setError(err.message || "نام کاربری یا رمز عبور نامعتبر است.");

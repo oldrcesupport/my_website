@@ -21,7 +21,7 @@ export default function AdminStaffPage() {
   const fetchStaff = () => {
     setLoading(true);
     setListError("");
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
+    const token = "";
     api.getAdminStaff(token)
       .then((data) => setStaffList(data || []))
       .catch((err) => {
@@ -40,7 +40,7 @@ export default function AdminStaffPage() {
     setCreateLoading(true);
     setErrorMsg("");
 
-    const token = localStorage.getItem("staff_token") || "";
+    const token = "";
     try {
       await api.createAdminStaff(token, {
         username: newUsername.trim(),

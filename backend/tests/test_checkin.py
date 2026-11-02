@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from apps.checkin.models import CheckInResult
@@ -42,8 +42,13 @@ class TestCheckInRedemption:
         order, _, _ = OrderService.create_order(
             "سفارش پرداخت‌نشده", "09129998877", quantity=1
         )
-        # Order status remains PENDING_PAYMENT
+        # Simulate a previously issued ticket whose order was subsequently
+        # moved out of PAID, to test the scanner's independent safeguard.
+        order.status = OrderStatus.PAID
+        order.save(update_fields=["status"])
         ticket = TicketService.issue_tickets_for_order(order)[0]
+        order.status = OrderStatus.PENDING_PAYMENT
+        order.save(update_fields=["status"])
         raw_token = ticket.get_raw_token()
 
         res, msg, _, _, _ = CheckInService.redeem_ticket(raw_token, scanner_user)
@@ -96,3 +101,18 @@ class TestCheckInRedemption:
         assert t.id == ticket.id
         assert t.status == TicketStatus.USED
         assert "ورود مجاز است" in msg
+
+    def test_duplicate_scan_displays_tehran_time_and_handles_missing_time(self, scanner_user):
+        order, _, _ = OrderService.create_order("Guest", "09121111111", quantity=1)
+        order.status = OrderStatus.PAID
+        order.save(update_fields=["status"])
+        ticket = TicketService.issue_tickets_for_order(order)[0]
+        ticket.status = TicketStatus.USED
+        ticket.used_at = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
+        ticket.save(update_fields=["status", "used_at"])
+        result, message, *_ = CheckInService.redeem_ticket(ticket.ticket_number, scanner_user)
+        assert result == CheckInResult.ALREADY_USED
+        assert "15:30:00" in message
+        ticket.used_at = None
+        ticket.save(update_fields=["used_at"])
+        assert CheckInService.redeem_ticket(ticket.ticket_number, scanner_user)[0] == CheckInResult.ALREADY_USED

@@ -1,4 +1,5 @@
 # Open Questions & Pending Business Details
+> **2026-11-02 update:** Production payment verification units, lost-response guest recovery, automated reconciliation and deployment validation remain unresolved; see ENGINEERING_PROGRESS.md. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 The following items are intentionally left unconfigured or marked with safe development defaults pending confirmation by the restaurant management:
 

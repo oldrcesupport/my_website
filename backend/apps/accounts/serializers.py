@@ -71,7 +71,7 @@ class StaffUserSerializer(serializers.ModelSerializer):
 
     def get_can_scan(self, obj):
         profile = getattr(obj, "staff_profile", None)
-        return obj.is_superuser or (profile and profile.can_scan) or obj.is_staff
+        return bool(obj.is_superuser or (profile and profile.can_scan))
 
 
 class StaffCreateUpdateSerializer(serializers.Serializer):

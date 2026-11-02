@@ -1,4 +1,5 @@
 # گزارش نهایی مهندسی کیفیت، امنیت و پایداری سیستم
+> **2026-11-02 update:** This audit, plan or report records an earlier snapshot; its claims and test results are historical, not current production-readiness evidence. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 ## Master Engineering Mission Delivery Report
 
 **پروژه:** سامانه فروش و پذیرش بلیت سالن موسیقی زنده رستوران  
@@ -30,7 +31,7 @@
 ## ۲. خلاصه اشکالات P0 و اقدامات اصلاحی (Critical P0 Remediations)
 
 1. **اصلاح دستور `setup_restaurant`:**
-   - دستور پیشین در هر بار اجرا، رمزهای عبور را به مقادیر پیش‌فرض `AdminSecret123!` ریست کرده و در ترمینال چاپ می‌نمود.
+   - دستور پیشین در هر بار اجرا، رمزهای عبور را به مقادیر پیش‌فرض ناامن بازنشانی و در ترمینال چاپ می‌کرد.
    - اکنون در صورت وجود حساب، رمز دست‌نخورده باقی می‌ماند و کلمات عبور هرگز در خروجی لاگ نمی‌شوند.
 2. **محدودسازی دسترسی پرسنل اسکنر (`STAFF_SCANNER`):**
    - به دلیل شرط پیشین `is_staff or is_superuser`، پرسنل اسکنر قادر به مشاهده اطلاعات خصوصی سفارش‌ها و بلیت‌های مشتریان بودند.

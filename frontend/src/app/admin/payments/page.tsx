@@ -16,7 +16,7 @@ export default function AdminPaymentsPage() {
   const fetchPayments = () => {
     setLoading(true);
     setErrorMsg("");
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
+    const token = "";
     api.getAdminPayments(token, {
       authority: authoritySearch.trim() || undefined,
       status: statusFilter || undefined,
@@ -43,7 +43,7 @@ export default function AdminPaymentsPage() {
 
   const handleRetryVerification = async (paymentId: number) => {
     setRetryingId(paymentId);
-    const token = localStorage.getItem("staff_token") || "";
+    const token = "";
     try {
       const res = await api.retryPaymentVerification(token, paymentId);
       alert(`نتیجه اعتبارسنجی: ${res.result} - ${res.message}`);

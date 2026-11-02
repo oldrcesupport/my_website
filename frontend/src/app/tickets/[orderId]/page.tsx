@@ -61,9 +61,7 @@ export default function TicketPassesPage({ params }: PageProps) {
         }
       } catch (err: any) {
         const msg = err.message || "خطا در بارگذاری بلیت‌ها یا عدم دسترسی.";
-        if (showLoader || !data) {
-          setError(msg);
-        }
+        setError(msg);
         // If 403 Forbidden or 404 Not Found, stop continuous polling
         if (msg.includes("دسترسی") || msg.includes("یافت نشد")) {
           stopPollingRef.current = true;
@@ -72,7 +70,7 @@ export default function TicketPassesPage({ params }: PageProps) {
         if (showLoader) setLoading(false);
       }
     },
-    [orderId, data]
+    [orderId]
   );
 
   useEffect(() => {
@@ -110,7 +108,7 @@ export default function TicketPassesPage({ params }: PageProps) {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="min-h-screen bg-[#F5F0E7] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-[#FFFCF6] rounded-3xl p-8 border border-[#E6DED1] text-center space-y-4">
@@ -136,6 +134,11 @@ export default function TicketPassesPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-[#F5F0E7] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
+        {error && (
+          <p role="status" className="rounded-lg border border-[#A85E48] bg-white p-4 text-sm text-[#733c2d]">
+            به‌روزرسانی وضعیت بلیت ممکن نشد: {error}
+          </p>
+        )}
         
         {/* Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">

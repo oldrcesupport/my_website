@@ -42,37 +42,8 @@ class ZarinPalCallbackView(APIView):
 
         order_id_param = f"&order_id={order.public_id}" if order else ""
 
-        guest_token = order.get_guest_access_token() if order else ""
-
-        ref_id = ""
-        if order:
-            verified_att = order.payment_attempts.filter(status="VERIFIED").first()
-            if verified_att and verified_att.reference_id:
-                ref_id = verified_att.reference_id
-        ref_param = f"&ref_id={ref_id}" if ref_id else ""
-
-        # Note: guest_token is strictly sent via HttpOnly cookie, NEVER appended to the URL query string
-        redirect_url = f"{frontend_base}/payment/return?status={result_state.lower()}{order_id_param}{ref_param}&auth={authority}"
-        resp = redirect(redirect_url)
-        if guest_token and order:
-            is_prod = getattr(settings, "APP_ENV", "development") == "production"
-            resp.set_cookie(
-                f"guest_token_{order.public_id}",
-                guest_token,
-                max_age=86400 * 7,
-                httponly=True,
-                samesite="Lax",
-                secure=is_prod,
-            )
-            resp.set_cookie(
-                "guest_access_token",
-                guest_token,
-                max_age=86400 * 7,
-                httponly=True,
-                samesite="Lax",
-                secure=is_prod,
-            )
-        return resp
+        # A callback authority is not proof of guest ownership.
+        return redirect(f"{frontend_base}/payment/return?status={result_state.lower()}{order_id_param}")
 
 
 class AdminPaymentListView(APIView):

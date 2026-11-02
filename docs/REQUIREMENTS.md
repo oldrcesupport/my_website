@@ -1,4 +1,5 @@
 # Requirements Specification: Premium Live Music Restaurant Ticketing Platform
+> **2026-11-02 update:** Current business rules remain one person per ticket, one configured Toman price, guest checkout, Tehran business day and one-time redemption. Capacity control is currently disabled. The material below is a historical snapshot and may contain outdated claims. For the current status see [ENGINEERING_PROGRESS.md](ENGINEERING_PROGRESS.md), [API.md](API.md) and [PAYMENT_FLOW.md](PAYMENT_FLOW.md).
 
 ## 1. Business Context & Problem Statement
 A high-end restaurant offers dining services in its main dining hall and operates an adjoining, dedicated live-music performance lounge. Customers may enter the restaurant to dine and subsequently choose to enter the live-music lounge. Admission to the live-music lounge requires a separate admission ticket.

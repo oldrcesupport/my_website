@@ -18,7 +18,7 @@ export default function AdminOrdersPage() {
   const fetchOrders = () => {
     setLoading(true);
     setErrorMsg("");
-    const token = typeof window !== "undefined" ? localStorage.getItem("staff_token") || "" : "";
+    const token = "";
     api.getAdminOrders(token, {
       search: search.trim() || undefined,
       status: statusFilter || undefined,
@@ -45,7 +45,7 @@ export default function AdminOrdersPage() {
 
   const handleViewDetail = (publicId: string) => {
     setDetailLoading(true);
-    const token = localStorage.getItem("staff_token") || "";
+    const token = "";
     api.getAdminOrderDetail(token, publicId)
       .then((data) => setSelectedOrder(data))
       .catch((err) => alert("خطا در بارگذاری جزئیات: " + err.message))

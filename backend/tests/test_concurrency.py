@@ -11,6 +11,41 @@ from django.db import connection, connections
 
 @pytest.mark.django_db(transaction=True)
 class TestPostgreSQLConcurrency:
+    def test_two_payment_attempts_cannot_issue_twice(self, monkeypatch):
+        from apps.payments.adapters.mock import MockPaymentAdapter
+        from apps.payments.services import PaymentService
+
+        barrier = threading.Barrier(2)
+
+        class ConcurrentAdapter(MockPaymentAdapter):
+            def verify_payment(self, authority, amount_toman):
+                barrier.wait(timeout=10)
+                return super().verify_payment(authority, amount_toman)
+
+        monkeypatch.setattr("apps.payments.services.get_payment_adapter", lambda: ConcurrentAdapter())
+        order, _, _ = OrderService.create_order("Guest", "09121234567", quantity=2)
+        _, _, first, _ = PaymentService.initiate_payment(order)
+        _, _, second, _ = PaymentService.initiate_payment(order)
+        outcomes = []
+
+        def callback(authority):
+            connections.close_all()
+            try:
+                outcomes.append(PaymentService.process_callback(authority, "OK")[0])
+            except Exception as exc:
+                outcomes.append(f"ERROR: {exc}")
+            finally:
+                connections.close_all()
+
+        threads = [threading.Thread(target=callback, args=(a.authority,)) for a in (first, second)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=20)
+        assert all(not thread.is_alive() for thread in threads)
+        assert sorted(outcomes) == ["LATE_REVIEW", "SUCCESS"]
+        assert order.tickets.count() == 2
+
     def test_simultaneous_qr_redemption_race_condition(self, scanner_user):
         """
         Executes two concurrent worker threads attempting to redeem the exact same QR token

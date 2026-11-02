@@ -6,9 +6,9 @@ services:
     environment:
       POSTGRES_DB: restaurant_ticketing
       POSTGRES_USER: ticketing_user
-      POSTGRES_PASSWORD: ticketing_secret
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the environment}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
