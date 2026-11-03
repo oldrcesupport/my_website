@@ -40,8 +40,8 @@ export default async function HomePage() {
           tagline={tagline}
           ticketPrice={ticketPrice}
         />
-        <LoungeExperience />
         <TicketPurchaseForm settings={settings} />
+        <LoungeExperience />
         <HowItWorks />
         <FaqSection />
       </main>

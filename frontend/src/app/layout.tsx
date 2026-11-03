@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Vazirmatn } from "next/font/google";
+import localFont from "next/font/local";
 import "@/styles/globals.css";
 
-const vazirmatn = Vazirmatn({
-  subsets: ["arabic"],
+const vazirmatn = localFont({
+  src: "../../node_modules/vazirmatn/fonts/webfonts/Vazirmatn[wght].woff2",
   variable: "--font-vazirmatn",
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: "100 900",
   display: "swap",
   fallback: ["Tahoma", "Arial", "sans-serif"],
 });

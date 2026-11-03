@@ -20,3 +20,17 @@ provide secure recovery after the creation response is lost or the page reloads.
 The homepage and selected scanner/admin states were inspected in a browser;
 responsive, keyboard, accessibility and error-path coverage is incomplete. See
 `ENGINEERING_PROGRESS.md` for evidence and `RESPONSIVE_QA.md` for prior notes.
+
+
+## November 2026 update
+
+The public, payment, ticket, scanner and admin pages have been visually refreshed.
+The public footer no longer advertises staff/admin links; this is presentation,
+not an authorization boundary. Vazirmatn variable font is bundled locally via
+`next/font/local`, and the hero uses an illustrative generated WebP asset.
+Development and production Next.js artifacts use separate directories.
+Checkout rejects mismatched browser origins before order creation. Payment return
+distinguishes unavailable ownership/status from pending and offers a retry.
+The scanner shows history failures, prevents overlapping scans, asks for camera
+access on activation and stops the camera on logout. Physical camera testing,
+full accessibility and comprehensive cross-device testing remain outstanding.

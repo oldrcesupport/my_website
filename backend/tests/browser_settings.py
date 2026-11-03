@@ -10,5 +10,5 @@ if not os.environ.get("DB_NAME", "").startswith("codex_browser_"):
 
 ROOT_URLCONF = "tests.browser_urls"
 PAYMENT_PROVIDER = "mock"
-FRONTEND_URL = "http://localhost:3000"
-PAYMENT_CALLBACK_URL = "http://localhost:3000/api/v1/payments/zarinpal/callback/"
+FRONTEND_URL = "http://127.0.0.1:3000"
+PAYMENT_CALLBACK_URL = "http://127.0.0.1:3000/api/v1/payments/zarinpal/callback/"

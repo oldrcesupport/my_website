@@ -8,6 +8,8 @@
 > and issued two tickets. These are sandbox observations, not a guarantee of
 > current production behavior or a substitute for provider confirmation.
 
+> Rechecked on 2026-11-03: a two-ticket sandbox checkout returned to the same `127.0.0.1` origin, issued two tickets, and manual admission rejected a repeated scan. This was not a live payment.
+
 ## 1. Provider Endpoints
 
 ### 1.1 Development Sandbox Endpoints

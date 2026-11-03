@@ -1,19 +1,8 @@
 import React from "react";
-
-export function LoungeExperience() {
-  return (
-    <section id="about-lounge" className="bg-[#18382f] px-5 py-16 text-[#f8f6ef] sm:px-8 md:py-20">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1fr_1.4fr] md:gap-20">
-        <div>
-          <p className="text-sm text-[#d7c29c]">پیش از خرید</p>
-          <h2 className="mt-4 text-3xl font-bold leading-relaxed">آنچه باید درباره بلیت بدانید</h2>
-        </div>
-        <div className="divide-y divide-white/20 border-y border-white/20">
-          <div className="grid gap-2 py-5 sm:grid-cols-[10rem_1fr]"><h3 className="font-bold">برای هر نفر</h3><p className="leading-7 text-[#e2e8e0]">هر بلیت برای ورود یک نفر است؛ در یک سفارش می‌توانید چند بلیت تهیه کنید.</p></div>
-          <div className="grid gap-2 py-5 sm:grid-cols-[10rem_1fr]"><h3 className="font-bold">برای همان روز</h3><p className="leading-7 text-[#e2e8e0]">اعتبار بلیت در پایان روز کاری خرید به پایان می‌رسد.</p></div>
-          <div className="grid gap-2 py-5 sm:grid-cols-[10rem_1fr]"><h3 className="font-bold">در ورودی</h3><p className="leading-7 text-[#e2e8e0]">پس از تأیید پرداخت، کد هر بلیت را به مسئول پذیرش نشان دهید. هر کد یک‌بار پذیرفته می‌شود.</p></div>
-        </div>
-      </div>
-    </section>
-  );
-}
+import { CalendarDays, TicketCheck, UtensilsCrossed } from "lucide-react";
+const details = [
+  { icon: CalendarDays, title: "برای همان روز", text: "بلیت تا پایان روز کاری خرید معتبر است و امکان پیش‌خرید برای روزهای بعد وجود ندارد." },
+  { icon: TicketCheck, title: "ورود با کد بلیت", text: "بعد از پرداخت، کد هر بلیت را به مسئول پذیرش نشان دهید. هر کد یک‌بار قابل استفاده است." },
+  { icon: UtensilsCrossed, title: "فقط ورودی سالن", text: "بلیت شامل رزرو میز یا هزینه غذا و نوشیدنی نمی‌شود." },
+];
+export function LoungeExperience() { return <section id="about-lounge" className="details-section"><div className="wrap"><div className="section-heading"><div><p className="section-kicker">خوب است بدانید</p><h2>پیش از خرید بلیت</h2></div><p>چند نکته کوتاه برای اینکه با خیال راحت برنامه‌ریزی کنید.</p></div><div className="details-grid">{details.map(({icon: Icon,title,text},i) => <article className="detail-item" key={title}><span className={`detail-icon detail-icon-${i}`}><Icon size={22}/></span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>; }

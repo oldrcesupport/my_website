@@ -27,6 +27,7 @@ function playAudioFeedback(success: boolean) {
     const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
+    osc.onended = () => { void ctx.close(); };
     osc.connect(gain);
     gain.connect(ctx.destination);
 
@@ -70,9 +71,11 @@ export default function StaffScannerPage() {
   // Scan outcome feedback
   const [scanResult, setScanResult] = useState<CheckInScanResult | null>(null);
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [historyError, setHistoryError] = useState(false);
 
   const html5QrCodeRef = useRef<any>(null);
   const isPausedRef = useRef<boolean>(false);
+  const processingRef = useRef(false);
   const lastScannedCodeRef = useRef<string>("");
   const lastScannedTimeRef = useRef<number>(0);
   const scannerContainerId = "qr-reader-container";
@@ -97,37 +100,24 @@ export default function StaffScannerPage() {
 
   const loadHistory = (staffToken: string) => {
     api.getStaffCheckInHistory(staffToken)
-      .then((history) => setRecentScans(history))
-      .catch((err) => console.error("Error loading scan history:", err));
+      .then((history) => { setRecentScans(history); setHistoryError(false); })
+      .catch(() => setHistoryError(true));
   };
 
-  // Enumerate cameras safely with dynamic import
-  useEffect(() => {
-    if (user && typeof window !== "undefined") {
-      import("html5-qrcode").then(({ Html5Qrcode }) => {
-        Html5Qrcode.getCameras()
-          .then((devices) => {
-            if (devices && devices.length) {
-              setCameras(devices);
-              // Default to back/environment camera if present
-              const backCam = devices.find(
-                (d) =>
-                  d.label.toLowerCase().includes("back") ||
-                  d.label.toLowerCase().includes("environment")
-              );
-              setSelectedCamera(backCam ? backCam.id : devices[0].id);
-            }
-          })
-          .catch((err) => console.warn("Camera enumeration error:", err));
-      });
-    }
-  }, [user]);
-
   // Handle starting/stopping scanner
-  const startCamera = async () => {
-    if (!selectedCamera) return;
+  const startCamera = async (cameraId = selectedCamera) => {
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+      if (!cameraId) {
+        const devices = await Html5Qrcode.getCameras();
+        if (!devices.length) {
+          alert("دوربینی پیدا نشد یا دسترسی به آن مجاز نیست.");
+          return;
+        }
+        setCameras(devices);
+        cameraId = devices.find((device) => /back|environment/i.test(device.label))?.id || devices[0].id;
+        setSelectedCamera(cameraId);
+      }
       if (!html5QrCodeRef.current) {
         html5QrCodeRef.current = new Html5Qrcode(scannerContainerId, {
           formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
@@ -136,7 +126,7 @@ export default function StaffScannerPage() {
       }
 
       await html5QrCodeRef.current.start(
-        selectedCamera,
+        cameraId,
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
@@ -187,7 +177,7 @@ export default function StaffScannerPage() {
 
   const handleTokenScan = async (rawInput: string) => {
     const cleaned = rawInput.trim();
-    if (processing || !cleaned || isPausedRef.current) return;
+    if (processingRef.current || !cleaned || isPausedRef.current) return;
 
     // Debounce guard: Drop duplicate scans of the exact same code within 6 seconds
     const now = Date.now();
@@ -197,6 +187,7 @@ export default function StaffScannerPage() {
 
     lastScannedCodeRef.current = cleaned;
     lastScannedTimeRef.current = now;
+    processingRef.current = true;
     setProcessing(true);
 
     // PAUSE camera immediately so subsequent frames are not processed
@@ -249,6 +240,7 @@ export default function StaffScannerPage() {
       playAudioFeedback(false);
       loadHistory(token);
     } finally {
+      processingRef.current = false;
       setProcessing(false);
     }
   };
@@ -276,8 +268,8 @@ export default function StaffScannerPage() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-[#F5F0E7] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#203D33]" />
+      <div className="min-h-screen bg-[#F3F8F7] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#246D7A]" />
       </div>
     );
   }
@@ -289,25 +281,25 @@ export default function StaffScannerPage() {
   // Not logged in -> Show login redirect
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#F5F0E7] flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-[#FFFCF6] rounded-3xl p-8 border border-[#E6DED1] text-center space-y-5 shadow-lg">
-          <div className="w-14 h-14 rounded-2xl bg-[#203D33] text-[#FFFCF6] mx-auto flex items-center justify-center">
-            <Lock className="w-7 h-7 text-[#C3A16A]" />
+      <div className="min-h-screen bg-[#F3F8F7] flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-[#FFFFFF] rounded-3xl p-8 border border-[#DCE9E8] text-center space-y-5 shadow-lg">
+          <div className="w-14 h-14 rounded-2xl bg-[#246D7A] text-[#FFFFFF] mx-auto flex items-center justify-center">
+            <Lock className="w-7 h-7 text-[#C85D3D]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#203D33]">ورود پرسنل کنترل بلیت</h1>
-            <p className="text-xs text-[#77756D] mt-1.5">
+            <h1 className="text-xl font-bold text-[#246D7A]">ورود پرسنل کنترل بلیت</h1>
+            <p className="text-xs text-[#526A70] mt-1.5">
               برای دسترسی به اسکنر گیت ورودی، لطفاً ابتدا با حساب پرسنلی خود وارد شوید.
             </p>
           </div>
           <Link
             href="/admin/login?redirect=/staff/scanner"
-            className="w-full py-3.5 px-6 rounded-2xl bg-[#203D33] text-[#FFFCF6] hover:bg-[#294D40] text-sm font-bold shadow-md flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-6 rounded-2xl bg-[#246D7A] text-[#FFFFFF] hover:bg-[#195560] text-sm font-bold shadow-md flex items-center justify-center gap-2"
           >
             صفحه ورود به سیستم
           </Link>
           <div className="pt-2">
-            <Link href="/" className="text-xs text-[#77756D] hover:text-[#203D33]">
+            <Link href="/" className="text-xs text-[#526A70] hover:text-[#246D7A]">
               بازگشت به وب‌سایت
             </Link>
           </div>
@@ -317,17 +309,17 @@ export default function StaffScannerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F0E7] pb-16">
+    <div className="min-h-screen bg-[#F3F8F7] pb-16">
       {/* Top Staff Navbar */}
-      <header className="bg-[#203D33] text-[#FFFCF6] px-4 py-4 border-b border-[#294D40]">
+      <header className="bg-[#246D7A] text-[#FFFFFF] px-4 py-4 border-b border-[#195560]">
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="w-9 h-9 shrink-0 rounded-xl bg-[#C3A16A] text-[#203D33] flex items-center justify-center font-bold">
-              <QrCode className="w-5 h-5 text-[#203D33]" />
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-[#C85D3D] text-[#246D7A] flex items-center justify-center font-bold">
+              <QrCode className="w-5 h-5 text-[#246D7A]" />
             </div>
             <div className="min-w-0 break-words">
               <span className="text-sm font-bold block">گیت پذیرش سالن موسیقی</span>
-              <span className="text-xs text-[#E6DED1]/80 block">
+              <span className="text-xs text-[#DCE9E8]/80 block">
                 پرسنل: {user.display_name || user.username}
               </span>
             </div>
@@ -337,14 +329,14 @@ export default function StaffScannerPage() {
             {(user.is_admin || user.is_super_admin) && (
               <Link
                 href="/admin/dashboard"
-                className="text-xs px-3 py-1.5 rounded-lg bg-[#C3A16A] hover:bg-[#b08f58] text-[#203D33] font-bold flex items-center gap-1"
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#C85D3D] hover:bg-[#A9492F] text-[#246D7A] font-bold flex items-center gap-1"
               >
                 پنل مدیریت
               </Link>
             )}
             <Link
               href="/"
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#FFFCF6]/10 hover:bg-[#FFFCF6]/20 text-[#E6DED1]"
+              className="text-xs px-3 py-1.5 rounded-lg bg-[#FFFFFF]/10 hover:bg-[#FFFFFF]/20 text-[#DCE9E8]"
             >
               صفحه اصلی
             </Link>
@@ -352,13 +344,14 @@ export default function StaffScannerPage() {
               onClick={async () => {
                 try {
                   await api.logout("");
+                  await stopCamera();
                   setUser(null);
                   setToken("");
                 } catch {
                   window.alert("خروج انجام نشد؛ دوباره تلاش کنید.");
                 }
               }}
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#A85E48]/80 hover:bg-[#A85E48] text-[#FFFCF6]"
+              className="text-xs px-3 py-1.5 rounded-lg bg-[#A9453A]/80 hover:bg-[#A9453A] text-[#FFFFFF]"
             >
               خروج
             </button>
@@ -374,27 +367,27 @@ export default function StaffScannerPage() {
           <div
             className={`p-6 rounded-3xl border shadow-lg text-center space-y-3 transition-all ${
               scanResult.result === "SUCCESS"
-                ? "bg-[#203D33] text-[#FFFCF6] border-[#203D33]"
+                ? "bg-[#246D7A] text-[#FFFFFF] border-[#246D7A]"
                 : scanResult.result === "ALREADY_USED"
-                ? "bg-[#A85E48] text-[#FFFCF6] border-[#A85E48]"
+                ? "bg-[#A9453A] text-[#FFFFFF] border-[#A9453A]"
                 : scanResult.result === "NETWORK_ERROR" || scanResult.result === "SERVER_ERROR"
-                ? "bg-[#8A5B20] text-[#FFFCF6] border-[#8A5B20]"
+                ? "bg-[#8A5B20] text-[#FFFFFF] border-[#8A5B20]"
                 : scanResult.result === "AUTH_ERROR"
-                ? "bg-[#6B21A8] text-[#FFFCF6] border-[#6B21A8]"
-                : "bg-[#77756D] text-[#FFFCF6] border-[#77756D]"
+                ? "bg-[#6B21A8] text-[#FFFFFF] border-[#6B21A8]"
+                : "bg-[#526A70] text-[#FFFFFF] border-[#526A70]"
             }`}
           >
-            <div className="w-14 h-14 rounded-full bg-[#FFFCF6]/20 mx-auto flex items-center justify-center">
-              {scanResult.result === "SUCCESS" && <CheckCircle2 className="w-8 h-8 text-[#C3A16A]" />}
-              {scanResult.result === "ALREADY_USED" && <AlertTriangle className="w-8 h-8 text-[#FFFCF6]" />}
+            <div className="w-14 h-14 rounded-full bg-[#FFFFFF]/20 mx-auto flex items-center justify-center">
+              {scanResult.result === "SUCCESS" && <CheckCircle2 className="w-8 h-8 text-[#C85D3D]" />}
+              {scanResult.result === "ALREADY_USED" && <AlertTriangle className="w-8 h-8 text-[#FFFFFF]" />}
               {(scanResult.result === "NETWORK_ERROR" || scanResult.result === "SERVER_ERROR" || scanResult.result === "AUTH_ERROR") && (
-                <AlertTriangle className="w-8 h-8 text-[#FFFCF6]" />
+                <AlertTriangle className="w-8 h-8 text-[#FFFFFF]" />
               )}
               {scanResult.result !== "SUCCESS" &&
                 scanResult.result !== "ALREADY_USED" &&
                 scanResult.result !== "NETWORK_ERROR" &&
                 scanResult.result !== "SERVER_ERROR" &&
-                scanResult.result !== "AUTH_ERROR" && <XCircle className="w-8 h-8 text-[#FFFCF6]" />}
+                scanResult.result !== "AUTH_ERROR" && <XCircle className="w-8 h-8 text-[#FFFFFF]" />}
             </div>
 
             <h2 className="text-xl font-bold">
@@ -409,12 +402,12 @@ export default function StaffScannerPage() {
               {scanResult.result === "AUTH_ERROR" && "خطای احراز هویت پرسنل"}
             </h2>
 
-            <p className="text-sm text-[#FFFCF6]/90 leading-relaxed max-w-sm mx-auto">
+            <p className="text-sm text-[#FFFFFF]/90 leading-relaxed max-w-sm mx-auto">
               {scanResult.message}
             </p>
 
             {scanResult.ticket_number && (
-              <div className="inline-block px-4 py-1.5 rounded-full bg-[#FFFCF6]/15 font-mono text-xs tracking-wider" dir="ltr">
+              <div className="inline-block px-4 py-1.5 rounded-full bg-[#FFFFFF]/15 font-mono text-xs tracking-wider" dir="ltr">
                 {scanResult.ticket_number}
               </div>
             )}
@@ -422,9 +415,9 @@ export default function StaffScannerPage() {
             <div className="pt-2">
               <button
                 onClick={resumeScanner}
-                className="px-6 py-2.5 rounded-xl bg-[#FFFCF6] text-[#203D33] text-xs font-bold shadow-md hover:bg-[#F5F0E7] flex items-center gap-1.5 mx-auto transition-transform active:scale-95"
+                className="px-6 py-2.5 rounded-xl bg-[#FFFFFF] text-[#246D7A] text-xs font-bold shadow-md hover:bg-[#F3F8F7] flex items-center gap-1.5 mx-auto transition-transform active:scale-95"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-[#C3A16A]" />
+                <RotateCcw className="w-3.5 h-3.5 text-[#C85D3D]" />
                 اسکن بلیت بعدی
               </button>
             </div>
@@ -432,10 +425,10 @@ export default function StaffScannerPage() {
         )}
 
         {/* Camera Viewport Container */}
-        <div className="bg-[#FFFCF6] rounded-3xl p-6 border border-[#E6DED1] shadow-md space-y-4">
+        <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#DCE9E8] shadow-md space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[#203D33] flex items-center gap-2">
-              <Camera className="w-4 h-4 text-[#C3A16A]" />
+            <h3 className="text-sm font-bold text-[#246D7A] flex items-center gap-2">
+              <Camera className="w-4 h-4 text-[#C85D3D]" />
               دوربین اسکن بارکد
             </h3>
 
@@ -445,10 +438,10 @@ export default function StaffScannerPage() {
                 onChange={(e) => {
                   setSelectedCamera(e.target.value);
                   if (cameraActive) {
-                    stopCamera().then(() => startCamera());
+                    stopCamera().then(() => startCamera(e.target.value));
                   }
                 }}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-[#F5F0E7] border border-[#E6DED1] text-[#262A25] focus:outline-none"
+                className="text-xs px-2.5 py-1.5 rounded-lg bg-[#F3F8F7] border border-[#DCE9E8] text-[#213F48] focus:outline-none"
               >
                 {cameras.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -460,11 +453,11 @@ export default function StaffScannerPage() {
           </div>
 
           {/* Video Target Box */}
-          <div className="overflow-hidden rounded-2xl bg-[#202823] min-h-[260px] flex items-center justify-center relative">
+          <div className="overflow-hidden rounded-2xl bg-[#173643] min-h-[260px] flex items-center justify-center relative">
             <div id={scannerContainerId} className="w-full" />
             {!cameraActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#E6DED1]/70 space-y-3">
-                <Camera className="w-10 h-10 text-[#C3A16A]/70" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-[#DCE9E8]/70 space-y-3">
+                <Camera className="w-10 h-10 text-[#C85D3D]/70" />
                 <span className="text-xs">دوربین غیرفعال است. جهت آغاز بررسی بارکدها دکمه زیر را لمس نمایید.</span>
               </div>
             )}
@@ -474,16 +467,16 @@ export default function StaffScannerPage() {
           <div>
             {!cameraActive ? (
               <button
-                onClick={startCamera}
-                className="w-full py-3.5 rounded-2xl bg-[#203D33] text-[#FFFCF6] hover:bg-[#294D40] text-sm font-bold shadow-sm flex items-center justify-center gap-2"
+                onClick={() => startCamera()}
+                className="w-full py-3.5 rounded-2xl bg-[#246D7A] text-[#FFFFFF] hover:bg-[#195560] text-sm font-bold shadow-sm flex items-center justify-center gap-2"
               >
-                <Camera className="w-4 h-4 text-[#C3A16A]" />
+                <Camera className="w-4 h-4 text-[#C85D3D]" />
                 روشن کردن دوربین اسکن
               </button>
             ) : (
               <button
                 onClick={stopCamera}
-                className="w-full py-3.5 rounded-2xl bg-[#A85E48]/90 text-[#FFFCF6] hover:bg-[#A85E48] text-sm font-bold shadow-sm flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-2xl bg-[#A9453A]/90 text-[#FFFFFF] hover:bg-[#A9453A] text-sm font-bold shadow-sm flex items-center justify-center gap-2"
               >
                 خاموش کردن دوربین
               </button>
@@ -492,9 +485,9 @@ export default function StaffScannerPage() {
         </div>
 
         {/* Manual Code Fallback Input */}
-        <div className="bg-[#FFFCF6] rounded-3xl p-6 border border-[#E6DED1] shadow-xs space-y-3">
-          <h3 className="text-xs font-bold text-[#203D33] flex items-center gap-1.5">
-            <QrCode className="w-4 h-4 text-[#C3A16A]" />
+        <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#DCE9E8] shadow-xs space-y-3">
+          <h3 className="text-xs font-bold text-[#246D7A] flex items-center gap-1.5">
+            <QrCode className="w-4 h-4 text-[#C85D3D]" />
             ورود دستی کد یا توکن بارکد (جایگزین دوربین)
           </h3>
           <form onSubmit={handleManualSubmit} className="flex gap-2">
@@ -504,12 +497,13 @@ export default function StaffScannerPage() {
               onChange={(e) => setManualCode(e.target.value)}
               placeholder="شماره سریال بلیت (مثلاً TKT-20261031-XXXXXX) یا توکن بارکد..."
               dir="ltr"
-              className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#F5F0E7] border border-[#E6DED1] text-xs font-mono text-[#262A25] placeholder:text-[#77756D]/60 focus:outline-none focus:ring-1 focus:ring-[#203D33]"
+              aria-label="کد بلیت یا توکن بارکد"
+              className="min-w-0 flex-1 px-3.5 py-2.5 rounded-xl bg-[#F3F8F7] border border-[#DCE9E8] text-xs font-mono text-[#213F48] placeholder:text-[#526A70]/60 focus:outline-none focus:ring-1 focus:ring-[#246D7A]"
             />
             <button
               type="submit"
               disabled={processing || !manualCode.trim()}
-              className="px-4 py-2.5 rounded-xl bg-[#203D33] text-[#FFFCF6] hover:bg-[#294D40] disabled:opacity-40 text-xs font-bold"
+              className="px-4 py-2.5 rounded-xl bg-[#246D7A] text-[#FFFFFF] hover:bg-[#195560] disabled:opacity-40 text-xs font-bold"
             >
               بررسی
             </button>
@@ -517,46 +511,47 @@ export default function StaffScannerPage() {
         </div>
 
         {/* Recent Scan History */}
-        <div className="bg-[#FFFCF6] rounded-3xl p-6 border border-[#E6DED1] shadow-xs space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-[#E6DED1]">
-            <h3 className="text-xs font-bold text-[#203D33] flex items-center gap-1.5">
-              <History className="w-4 h-4 text-[#77756D]" />
+        <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#DCE9E8] shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#DCE9E8]">
+            <h3 className="text-xs font-bold text-[#246D7A] flex items-center gap-1.5">
+              <History className="w-4 h-4 text-[#526A70]" />
               آخرین اسکن‌های انجام‌شده
             </h3>
-            <span className="text-[11px] text-[#77756D]">
+            <span className="text-[11px] text-[#526A70]">
               {toPersianDigits(recentScans.length)} مورد
             </span>
           </div>
 
-          <div className="divide-y divide-[#E6DED1]/50 max-h-60 overflow-y-auto">
-            {recentScans.length === 0 ? (
-              <div className="py-6 text-center text-xs text-[#77756D]">
+          {historyError && <div role="alert" className="text-sm text-[#A9453A]">دریافت تاریخچه اسکن‌ها ممکن نیست. <button type="button" className="underline font-bold" onClick={() => loadHistory(token)}>تلاش دوباره</button></div>}
+          <div className="divide-y divide-[#DCE9E8]/50 max-h-60 overflow-y-auto">
+            {recentScans.length === 0 && !historyError ? (
+              <div className="py-6 text-center text-xs text-[#526A70]">
                 هنوز هیچ بلیتی توسط شما اسکن نشده است.
               </div>
             ) : (
               recentScans.map((rec) => (
                 <div key={rec.id} className="py-2.5 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-mono font-bold text-[#203D33] block" dir="ltr">
+                    <span className="font-mono font-bold text-[#246D7A] block" dir="ltr">
                       {rec.ticket_number || "کد نامعتبر"}
                     </span>
-                    <span className="text-[11px] text-[#77756D] block">
+                    <span className="text-[11px] text-[#526A70] block">
                       {formatTimeOnly(rec.scanned_at)}
                     </span>
                   </div>
                   <div>
                     {rec.result === "SUCCESS" && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#203D33]/10 text-[#203D33]">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#246D7A]/10 text-[#246D7A]">
                         پذیرش شد
                       </span>
                     )}
                     {rec.result === "ALREADY_USED" && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#A85E48]/15 text-[#A85E48]">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#A9453A]/15 text-[#A9453A]">
                         قبلاً استفاده شده
                       </span>
                     )}
                     {rec.result !== "SUCCESS" && rec.result !== "ALREADY_USED" && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#77756D]/15 text-[#77756D]">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#526A70]/15 text-[#526A70]">
                         ناموفق ({rec.result})
                       </span>
                     )}

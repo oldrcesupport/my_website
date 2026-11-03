@@ -137,7 +137,11 @@ class ZarinPalV4Adapter(BasePaymentAdapter):
         res_data = data.get("data", {})
         code = res_data.get("code")
         raw_ref_id = res_data.get("ref_id")
-        ref_id = str(raw_ref_id) if raw_ref_id is not None else ""
+        if type(code) is not int:
+            return False, "", -998, "کد پاسخ درگاه نامعتبر است.", {"error": "invalid_gateway_response"}
+        ref_id = str(raw_ref_id) if type(raw_ref_id) in (str, int) else ""
+        if len(ref_id) > 100:
+            return False, "", -998, "شناسه پیگیری درگاه نامعتبر است.", {"error": "invalid_gateway_response"}
 
         # Code 100: Success
         # Code 101: Already Verified

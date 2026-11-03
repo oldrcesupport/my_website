@@ -96,3 +96,20 @@ def test_health_probe_checks_database(client):
     response = client.get("/api/v1/health/")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+@pytest.mark.django_db
+def test_unexpected_gateway_exception_keeps_order_recoverable(monkeypatch):
+    class BrokenAdapter(MockPaymentAdapter):
+        def verify_payment(self, authority, amount_toman):
+            raise RuntimeError("unexpected provider failure")
+
+    monkeypatch.setattr("apps.payments.services.get_payment_adapter", lambda: BrokenAdapter())
+    order, _, _ = OrderService.create_order("Guest", "09121111111", 1)
+    _, _, attempt, _ = PaymentService.initiate_payment(order)
+    assert PaymentService.process_callback(attempt.authority, "OK")[0] == "PENDING"
+    order.refresh_from_db()
+    attempt.refresh_from_db()
+    assert order.status == OrderStatus.PENDING_PAYMENT
+    assert attempt.status == PaymentAttemptStatus.UNKNOWN
+    assert not order.tickets.exists()

@@ -99,6 +99,8 @@ class AdminDashboardStatsView(APIView):
         today_unused_valid_tickets = Ticket.objects.filter(
             business_date=today_biz_date,
             status=TicketStatus.ISSUED,
+            order__status=OrderStatus.PAID,
+            valid_from__lte=now_utc,
             valid_until__gt=now_utc,
         ).count()
 

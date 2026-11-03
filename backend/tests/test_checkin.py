@@ -116,3 +116,23 @@ class TestCheckInRedemption:
         ticket.used_at = None
         ticket.save(update_fields=["used_at"])
         assert CheckInService.redeem_ticket(ticket.ticket_number, scanner_user)[0] == CheckInResult.ALREADY_USED
+
+
+@pytest.mark.django_db
+def test_dashboard_only_counts_currently_redeemable_tickets(admin_user):
+    from rest_framework.test import APIClient
+
+    order, _, _ = OrderService.create_order("Dashboard Test", "09121111111", 3)
+    order.status = OrderStatus.PAID
+    order.save(update_fields=["status"])
+    tickets = TicketService.issue_tickets_for_order(order)
+    tickets[1].valid_from = tickets[1].valid_until + timedelta(minutes=1)
+    tickets[1].save(update_fields=["valid_from"])
+    tickets[2].status = TicketStatus.CANCELLED
+    tickets[2].save(update_fields=["status"])
+    client = APIClient()
+    client.force_authenticate(user=admin_user)
+    assert client.get("/api/v1/admin/dashboard/").json()["today_unused_valid_tickets"] == 1
+    order.status = OrderStatus.PAYMENT_FAILED
+    order.save(update_fields=["status"])
+    assert client.get("/api/v1/admin/dashboard/").json()["today_unused_valid_tickets"] == 0

@@ -1,6 +1,6 @@
 # Documentation index
 
-Updated 2026-11-02. The project is **not ready for production**. Start with:
+Updated 2026-11-03. The project is **not ready for production**. Start with:
 
 - [Current engineering status, tests and outstanding risks](ENGINEERING_PROGRESS.md)
 - [API reference](API.md) and [payment flow](PAYMENT_FLOW.md)

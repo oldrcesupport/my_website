@@ -1,3 +1,5 @@
+import logging
+
 from apps.business_time.services import BusinessTimeService
 from apps.core.services import log_audit
 from apps.orders.models import Order, OrderStatus
@@ -7,6 +9,9 @@ from django.db import transaction
 
 from .adapters import get_payment_adapter
 from .models import PaymentAttempt, PaymentAttemptStatus
+
+
+logger = logging.getLogger(__name__)
 
 
 def safe_gateway_payload(payload):
@@ -128,9 +133,17 @@ class PaymentService:
 
         # --- External Provider Verification (ZERO DATABASE LOCK HELD) ---
         adapter = get_payment_adapter()
-        verified, ref_id, code, err_msg, raw_payload = adapter.verify_payment(
-            authority=cleaned_auth, amount_toman=amount_toman
-        )
+        try:
+            verified, ref_id, code, err_msg, raw_payload = adapter.verify_payment(
+                authority=cleaned_auth, amount_toman=amount_toman
+            )
+        except Exception as exc:
+            # Provider/adapter failures are ambiguous, never evidence that the
+            # customer's payment failed. Preserve the order for reconciliation.
+            logger.error("Payment verification failed for attempt %s (%s)", attempt.pk, type(exc).__name__)
+            verified, ref_id, code, err_msg, raw_payload = (
+                False, "", -999, "خطای موقت در بررسی پرداخت.", {"error": "verification_exception"}
+            )
         now_utc = BusinessTimeService.get_now_utc()
 
         # --- Phase 2: Finalize Attempt & Order in Short DB Transaction ---

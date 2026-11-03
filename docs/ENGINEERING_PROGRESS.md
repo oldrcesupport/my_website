@@ -1,11 +1,21 @@
-# Engineering status — 2026-11-02
+# Engineering status — 2026-11-03
+
+## Update — 2026-11-03
+
+- Public booking, ticket, payment, staff scanner and admin views use the updated light design. The public site no longer links to staff or admin routes. Vazirmatn is served locally; the hero illustration is illustrative, not a photograph of the venue.
+- Checkout rejects a supplied Origin that differs from the configured `FRONTEND_URL`, before an order is created. Sandbox browser settings consistently use `127.0.0.1`; ownership remains cookie-bound.
+- Unexpected verification exceptions and malformed provider response codes keep payment attempts in `UNKNOWN`; manual reconciliation remains required. Return-page ownership errors are shown as unavailable rather than pending.
+- Scanner history failure is visible, scanner processing has an immediate guard, and the camera is requested on user action and stopped on logout. The settings form submits changed fields only. The dashboard valid-ticket count checks payment status and the complete validity window.
+- On 2026-11-03, 56 backend tests passed on PostgreSQL, including the dashboard validity regression; `manage.py check` and migration drift check passed. Frontend production build and `npm audit` passed. A fresh two-ticket ZarinPal sandbox purchase displayed 2,000,000 rial, returned to the original host, issued two tickets, and manual redemption rejected a second scan. Camera scanning and real production payment were not tested.
+
+## Previous implementation and evidence — 2026-11-02
 
 ## Recommendation
 
 Not ready for production. This file records work actually done and known gaps;
 older audit documents are historical and may describe a different implementation.
 
-## Implemented
+## Implemented (historical snapshot)
 
 - Staff authentication uses an HttpOnly Django session and CSRF validation.
   Staff cannot use the former DRF token API. Role checks and staff management
@@ -27,7 +37,7 @@ older audit documents are historical and may describe a different implementation
   styles and narrow navigation received targeted changes. Other routes have not
   received a complete redesign or comprehensive accessibility review.
 
-## Evidence
+## Evidence (historical snapshot)
 
 - `python -m pytest -q`: 52 passed on PostgreSQL, including two-thread payment
   and scan tests and the boundary snapshot regression.

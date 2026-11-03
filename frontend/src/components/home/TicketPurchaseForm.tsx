@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import { PublicRestaurantSettings } from "@/types";
 import { formatToman, toPersianDigits } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { Ticket, Users, AlertCircle, ArrowLeft, Loader2, ShieldCheck, Clock } from "lucide-react";
+import { Ticket, AlertCircle, ArrowLeft, Loader2, ShieldCheck, Clock3 } from "lucide-react";
 
 interface Props {
   settings: PublicRestaurantSettings | null;
@@ -91,225 +91,41 @@ export function TicketPurchaseForm({ settings }: Props) {
         submitting.current = false;
       }
     } catch (err: any) {
+      // These responses reject the request before an order is created. Network
+      // and gateway failures remain ambiguous, so retain the key for safety.
+      if ([400, 403, 422].includes(err.status)) idempotencyKey.current = null;
       setErrorMessage((err.message || "خطایی در ثبت سفارش رخ داد.") + " در صورت نامشخص بودن نتیجه، پیش از خرید مجدد وضعیت پرداخت را بررسی کنید.");
       setLoading(false);
       submitting.current = false;
     }
   };
 
+  const unavailable = isCutoffActive || isSalesDisabled || loading;
   return (
-    <section id="purchase-section" className="py-20 bg-[#FFFCF6] relative border-y border-[#E6DED1]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Heading */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#203D33]/5 text-[#203D33] text-xs font-semibold mb-3">
-            <Ticket className="w-3.5 h-3.5 text-[#C3A16A]" />
-            پذیرش ویژه سالن موسیقی زنده
-          </div>
-          <h2 className="text-3xl font-bold tracking-tight text-[#203D33] sm:text-4xl">
-            تهیه بلیت ورودی
-          </h2>
-          <p className="mt-3 text-base text-[#77756D]">
-            بلیت ورودی برای حضور در بخش موسیقی زنده رستوران. هر بلیت منحصراً متعلق به یک نفر بوده و برای روز کاری جاری معتبر است.
-          </p>
+    <section id="purchase-section" className="booking-section">
+      <div className="wrap booking-layout">
+        <div className="booking-intro"><p className="section-kicker">خرید آنلاین بلیت</p><h2>برای امشب آماده‌اید؟</h2><p>تعداد بلیت‌ها را انتخاب کنید و مشخصات خریدار را وارد کنید. بعد از تأیید پرداخت، بلیت‌ها در همین مرورگر نمایش داده می‌شوند.</p>
+          <div className="booking-facts"><div><Ticket size={20}/><span><strong>یک بلیت، یک نفر</strong><small>برای هر مهمان یک کد جداگانه صادر می‌شود.</small></span></div><div><Clock3 size={20}/><span><strong>مخصوص روز خرید</strong><small>بلیت تا پایان روز کاری جاری اعتبار دارد.</small></span></div></div>
         </div>
-
-        {/* Demo Price Notice Banner */}
-        {settings?.is_demo_price && settings.ticket_price_toman != null && (
-          <div className="mb-8 p-4 rounded-2xl bg-[#C3A16A]/10 border border-[#C3A16A]/30 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
-            <div className="text-sm text-[#262A25]">
-              <span className="font-bold text-[#A85E48] block">محیط آزمایشی (Demo Mode):</span>
-              نرخ فعلی ({formatToman(unitPrice)}) یک مقدار آزمایشی است. وضعیت درگاه به تنظیمات محیط بستگی دارد.
-            </div>
-          </div>
-        )}
-
-        {/* Sales Cutoff Banner */}
-        {isCutoffActive && (
-          <div className="mb-8 p-4 rounded-2xl bg-[#A85E48]/10 border border-[#A85E48]/30 flex items-start gap-3">
-            <Clock className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
-            <div className="text-sm text-[#A85E48]">
-              <span className="font-bold block">توقف فروش آنلاین امروز:</span>
-              به دلیل نزدیک شدن به پایان ساعت کاری سالن، فروش بلیت آنلاین برای امروز پایان یافته است. پذیرش حضوری ممکن است همچنان برقرار باشد.
-            </div>
-          </div>
-        )}
-
-        {/* Sales Disabled Banner */}
-        {!settings && (
-          <div className="mb-8 p-4 rounded-2xl bg-[#A85E48]/10 border border-[#A85E48]/30 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
-            <div className="text-sm text-[#A85E48]">
-              امکان دریافت تنظیمات جاری سالن وجود ندارد. فروش آنلاین موقتاً غیرفعال است. لطفاً صفحه را تازه‌سازی نمایید.
-            </div>
-          </div>
-        )}
-
-        {settings && isSalesDisabled && !isCutoffActive && (
-          <div className="mb-8 p-4 rounded-2xl bg-[#A85E48]/10 border border-[#A85E48]/30 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#A85E48] shrink-0 mt-0.5" />
-            <div className="text-sm text-[#A85E48]">
-              فروش بلیت آنلاین موقتاً توسط مدیریت غیرفعال شده است.
-            </div>
-          </div>
-        )}
-
-        {/* Main Purchase Card */}
-        <div className="bg-[#F5F0E7]/60 rounded-3xl p-6 sm:p-10 border border-[#E6DED1] shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Step 1: Quantity Selector & Pricing */}
-            <div className="pb-8 border-b border-[#E6DED1]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-[#203D33] mb-1">
-                    تعداد بلیت ورودی
-                  </label>
-                  <span className="text-xs text-[#77756D]">
-                    نرخ هر بلیت: <span className="font-semibold text-[#203D33]">{settings?.ticket_price_toman != null ? formatToman(unitPrice) : "نامشخص"}</span> (برای هر نفر یک بلیت مجزا)
-                  </span>
-                </div>
-
-                {/* Counter Control */}
-                <div className="inline-flex items-center gap-3 bg-[#FFFCF6] p-1.5 rounded-2xl border border-[#E6DED1] self-start sm:self-auto shadow-xs">
-                  <button
-                    type="button"
-                    onClick={handleDecrement}
-                    disabled={quantity <= 1 || isCutoffActive || isSalesDisabled}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-[#203D33] hover:bg-[#F5F0E7] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    aria-label="کاهش تعداد"
-                  >
-                    -
-                  </button>
-                  <span className="w-12 text-center text-lg font-bold text-[#203D33]">
-                    {toPersianDigits(quantity)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleIncrement}
-                    disabled={quantity >= 10 || isCutoffActive || isSalesDisabled}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-[#203D33] hover:bg-[#F5F0E7] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    aria-label="افزایش تعداد"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Total Calculation Display */}
-              <div className="mt-6 p-4 rounded-2xl bg-[#FFFCF6] border border-[#E6DED1] flex items-center justify-between">
-                <span className="text-sm font-medium text-[#77756D]">
-                  مبلغ قابل پرداخت ({toPersianDigits(quantity)} بلیت):
-                </span>
-                <span className="text-xl font-extrabold text-[#203D33]">
-                  {settings?.ticket_price_toman != null ? formatToman(totalPrice) : "نامشخص"}
-                </span>
-              </div>
-            </div>
-
-            {/* Step 2: Guest Purchaser Information */}
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-[#203D33]">
-                مشخصات خریدار (خرید مهمان)
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Full Name */}
-                <div>
-                  <label htmlFor="purchaser_name" className="block text-xs font-semibold text-[#262A25] mb-1.5">
-                    نام و نام خانوادگی <span className="text-[#A85E48]">*</span>
-                  </label>
-                  <input
-                    id="purchaser_name"
-                    type="text"
-                    required
-                    value={purchaserName}
-                    onChange={(e) => setPurchaserName(e.target.value)}
-                    placeholder="مثال: علی محمدی"
-                    disabled={isCutoffActive || isSalesDisabled || loading}
-                    className="w-full px-4 py-3 rounded-xl bg-[#FFFCF6] border border-[#E6DED1] text-sm text-[#262A25] placeholder:text-[#77756D]/50 focus:outline-none focus:ring-2 focus:ring-[#203D33] focus:border-transparent transition-all"
-                  />
-                </div>
-
-                {/* Mobile Phone */}
-                <div>
-                  <label htmlFor="purchaser_phone" className="block text-xs font-semibold text-[#262A25] mb-1.5">
-                    شماره تلفن همراه <span className="text-[#A85E48]">*</span>
-                  </label>
-                  <input
-                    id="purchaser_phone"
-                    type="tel"
-                    dir="ltr"
-                    required
-                    value={purchaserPhone}
-                    onChange={(e) => setPurchaserPhone(e.target.value)}
-                    placeholder="09121234567"
-                    disabled={isCutoffActive || isSalesDisabled || loading}
-                    className="w-full px-4 py-3 rounded-xl bg-[#FFFCF6] border border-[#E6DED1] text-sm text-[#262A25] text-left placeholder:text-[#77756D]/50 focus:outline-none focus:ring-2 focus:ring-[#203D33] focus:border-transparent transition-all"
-                  />
-                </div>
-
-                {/* Email (Optional) */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="purchaser_email" className="block text-xs font-semibold text-[#262A25] mb-1.5">
-                    آدرس ایمیل <span className="text-xs text-[#77756D] font-normal">(اختیاری)</span>
-                  </label>
-                  <input
-                    id="purchaser_email"
-                    type="email"
-                    dir="ltr"
-                    value={purchaserEmail}
-                    onChange={(e) => setPurchaserEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    disabled={isCutoffActive || isSalesDisabled || loading}
-                    className="w-full px-4 py-3 rounded-xl bg-[#FFFCF6] border border-[#E6DED1] text-sm text-[#262A25] text-left placeholder:text-[#77756D]/50 focus:outline-none focus:ring-2 focus:ring-[#203D33] focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Error Message Alert */}
-            {errorMessage && (
-              <div className="p-4 rounded-xl bg-[#A85E48]/10 border border-[#A85E48]/30 text-sm text-[#A85E48] flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            {/* Trust Badges */}
-            <div className="flex flex-wrap items-center gap-4 text-xs text-[#77756D] pt-2">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#203D33]" />
-                اتصال امن به درگاه پرداخت
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Ticket className="w-4 h-4 text-[#C3A16A]" />
-                صدور آنی بارکد اختصاصی ورود
-              </span>
-            </div>
-
-            {/* Submit Action Button */}
-            <button
-              type="submit"
-              disabled={loading || isCutoffActive || isSalesDisabled}
-              className="w-full py-4 px-6 rounded-2xl bg-[#203D33] text-[#FFFCF6] hover:bg-[#294D40] disabled:bg-[#77756D]/40 disabled:cursor-not-allowed font-bold text-base shadow-md flex items-center justify-center gap-3 transition-all transform active:scale-[0.99]"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin text-[#C3A16A]" />
-                  <span>در حال انتقال به درگاه پرداخت...</span>
-                </>
-              ) : (
-                <>
-                  <span>{settings?.ticket_price_toman != null ? `تأیید و پرداخت ${formatToman(totalPrice)}` : "قیمت در دسترس نیست"}</span>
-                  <ArrowLeft className="w-5 h-5 text-[#C3A16A]" />
-                </>
-              )}
-            </button>
+        <div className="booking-card">
+          <div className="booking-card-heading"><div><span>بلیت ورودی</span><h3>اطلاعات سفارش</h3></div><span className="card-icon"><Ticket size={22}/></span></div>
+          {settings?.is_demo_price && settings.ticket_price_toman != null && <div className="notice notice-info"><AlertCircle size={19}/><p><strong>قیمت آزمایشی</strong> مبلغ نمایش‌داده‌شده آزمایشی است؛ وضعیت درگاه به تنظیمات محیط بستگی دارد.</p></div>}
+          {isCutoffActive && <div className="notice notice-error" role="status"><Clock3 size={19}/><p><strong>فروش امروز پایان یافته است.</strong> به دلیل نزدیک شدن به پایان ساعت کاری، خرید آنلاین ممکن نیست.</p></div>}
+          {!settings && <div className="notice notice-error" role="status"><AlertCircle size={19}/><p>دریافت تنظیمات سالن ممکن نیست. لطفاً صفحه را تازه‌سازی کنید.</p></div>}
+          {settings && isSalesDisabled && !isCutoffActive && <div className="notice notice-error" role="status"><AlertCircle size={19}/><p>فروش آنلاین بلیت در حال حاضر غیرفعال است.</p></div>}
+          <form onSubmit={handleSubmit} className="booking-form">
+            <div className="quantity-row"><div><strong>تعداد بلیت</strong><small>هر نفر {settings?.ticket_price_toman != null ? formatToman(unitPrice) : "نامشخص"}</small></div><div className="counter"><button type="button" onClick={handleDecrement} disabled={quantity <= 1 || unavailable} aria-label="کاهش تعداد">−</button><output aria-live="polite">{toPersianDigits(quantity)}</output><button type="button" onClick={handleIncrement} disabled={quantity >= 10 || unavailable} aria-label="افزایش تعداد">+</button></div></div>
+            <div className="form-divider"/><div className="form-title"><h4>مشخصات خریدار</h4><span>بدون نیاز به ثبت‌نام</span></div>
+            <div className="form-fields"><div className="field"><label htmlFor="purchaser_name">نام و نام خانوادگی <span>*</span></label><input id="purchaser_name" autoComplete="name" required value={purchaserName} onChange={e => setPurchaserName(e.target.value)} placeholder="نام خریدار" disabled={unavailable}/></div>
+              <div className="field"><label htmlFor="purchaser_phone">شماره موبایل <span>*</span></label><input id="purchaser_phone" type="tel" dir="ltr" autoComplete="tel" required value={purchaserPhone} onChange={e => setPurchaserPhone(e.target.value)} placeholder="0912 123 4567" disabled={unavailable}/></div>
+              <div className="field field-wide"><label htmlFor="purchaser_email">ایمیل <span className="optional">(اختیاری)</span></label><input id="purchaser_email" type="email" dir="ltr" autoComplete="email" value={purchaserEmail} onChange={e => setPurchaserEmail(e.target.value)} placeholder="name@example.com" disabled={unavailable}/></div></div>
+            {errorMessage && <div className="notice notice-error" role="alert"><AlertCircle size={19}/><p>{errorMessage}</p></div>}
+            <div className="order-total"><span>مبلغ قابل پرداخت <small>({toPersianDigits(quantity)} بلیت)</small></span><strong>{settings?.ticket_price_toman != null ? formatToman(totalPrice) : "نامشخص"}</strong></div>
+            <button type="submit" disabled={unavailable} className="booking-submit">{loading ? <><Loader2 size={19} className="animate-spin"/> در حال انتقال به درگاه...</> : <>ادامه و پرداخت <ArrowLeft size={19}/></>}</button>
+            <p className="secure-note"><ShieldCheck size={16}/> انتقال به درگاه پرداخت پس از ثبت سفارش</p>
           </form>
         </div>
       </div>
     </section>
   );
 }
-

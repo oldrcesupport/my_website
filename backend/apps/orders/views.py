@@ -1,6 +1,7 @@
 from apps.accounts.permissions import IsAdminUserRole
 from apps.payments.services import PaymentService
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import IntegrityError
 from django.db.models import Q
 from rest_framework import permissions, status
@@ -40,6 +41,15 @@ class CreateOrderView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        # Guest cookies are host-only. Sending a buyer to a different configured
+        # return host would strand the order after payment. Never trust a client
+        # Origin as a redirect target; reject a mismatched origin before checkout.
+        origin = request.headers.get("Origin", "").rstrip("/")
+        if origin and origin != settings.FRONTEND_URL.rstrip("/"):
+            return Response(
+                {"error": "نشانی سایت با نشانی بازگشت پرداخت یکسان نیست. لطفاً از نشانی اصلی سایت استفاده کنید."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = CreateOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -95,7 +105,6 @@ class CreateOrderView(APIView):
             "payment_redirect_url": redirect_url,
         }
 
-        from django.conf import settings
         is_prod = getattr(settings, "APP_ENV", "development") == "production"
 
         resp = Response(response_data, status=status.HTTP_201_CREATED)

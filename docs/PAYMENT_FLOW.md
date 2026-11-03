@@ -1,6 +1,6 @@
 # Payment and ticket flow
 
-Current implementation as of 2026-11-02; see `ENGINEERING_PROGRESS.md` for
+Current implementation as of 2026-11-03; see `ENGINEERING_PROGRESS.md` for
 verified scenarios and remaining risks. The production provider contract is
 not yet confirmed; do not enable live payment based on sandbox results alone.
 
@@ -25,9 +25,18 @@ verification. This worked in the observed sandbox tests, including provider
 codes 100 and 101 with a reference. It must be independently confirmed for
 production; see `ZARINPAL_SANDBOX.md` and `PRODUCTION_DRAFT.md`.
 
-Network or malformed verification results are marked `UNKNOWN`; administrator
+Network errors, unexpected adapter exceptions and malformed verification results are marked `UNKNOWN`; administrator
 retry is available, but automatic reconciliation is not. Order creation can
 lose its response before the ownership cookie arrives, and a retry cannot yet
 recover that order. `payment_deadline` is stored; do not assume an automated
 expiration or refund workflow exists. Older orders without `business_day_end`
 use the current configured boundary as a legacy fallback.
+
+Guest cookies are host-only: the browser checkout origin must exactly match
+`FRONTEND_URL` (scheme, host and port). When an Origin header is present,
+checkout rejects a mismatch before creating an order. The callback still uses
+only the configured server-side URL; the request Origin never controls its
+redirect. In the isolated sandbox browser settings both the callback and return
+use `http://127.0.0.1:3000`; do not alternate it with `localhost`. A paid order
+created on another host remains accessible only in the original browser and
+host while its ownership cookie is present.

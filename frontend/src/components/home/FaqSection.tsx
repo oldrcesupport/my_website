@@ -34,14 +34,14 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-20 bg-[#F5F0E7]">
+    <section id="faq" className="py-20 bg-[#F6F9F9]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div className="text-center mb-12">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#C3A16A] block mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#24647B] block mb-2">
             پاسخ به سوالات شما
           </span>
-          <h2 className="text-3xl font-extrabold text-[#203D33] sm:text-4xl">
+          <h2 className="text-3xl font-extrabold text-[#173643] sm:text-4xl">
             پرسش‌های متداول
           </h2>
         </div>
@@ -52,7 +52,7 @@ export function FaqSection() {
             return (
               <div
                 key={idx}
-                className="rounded-2xl bg-[#FFFCF6] border border-[#E6DED1] overflow-hidden transition-all shadow-2xs"
+                className="rounded-2xl bg-[#FFFFFF] border border-[#DCE8E8] overflow-hidden transition-all shadow-2xs"
               >
                 <button
                   type="button"
@@ -60,17 +60,17 @@ export function FaqSection() {
                   className="w-full p-5 text-right flex items-center justify-between gap-4"
                   aria-expanded={isOpen}
                 >
-                  <span className="text-base font-bold text-[#203D33]">
+                  <span className="text-base font-bold text-[#173643]">
                     {faq.q}
                   </span>
                   <ChevronDown
-                    className={`w-5 h-5 text-[#C3A16A] shrink-0 transition-transform duration-200 ${
+                    className={`w-5 h-5 text-[#24647B] shrink-0 transition-transform duration-200 ${
                       isOpen ? "transform rotate-180" : ""
                     }`}
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 pt-1 text-sm text-[#77756D] leading-relaxed border-t border-[#E6DED1]/50">
+                  <div className="px-5 pb-5 pt-1 text-sm text-[#536B73] leading-relaxed border-t border-[#DCE8E8]/50">
                     {faq.a}
                   </div>
                 )}

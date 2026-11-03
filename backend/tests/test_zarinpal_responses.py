@@ -25,3 +25,12 @@ def test_verify_rejects_unexpected_json(monkeypatch):
     response.json.return_value = []
     monkeypatch.setattr("apps.payments.adapters.zarinpal.requests.post", lambda *args, **kwargs: response)
     assert ZarinPalV4Adapter(is_sandbox=True, merchant_id="test").verify_payment("a", 1)[2] == -998
+
+
+def test_verify_malformed_code_is_unknown_not_declined(monkeypatch):
+    adapter = ZarinPalV4Adapter(is_sandbox=True, merchant_id="test")
+    for payload in ({"data": {}}, {"data": {"code": "100", "ref_id": 123}}, {"data": {"code": 100, "ref_id": True}}):
+        response = Mock()
+        response.json.return_value = payload
+        monkeypatch.setattr("apps.payments.adapters.zarinpal.requests.post", lambda *args, **kwargs: response)
+        assert adapter.verify_payment("a", 1)[2] == -998

@@ -21,6 +21,7 @@ export default function AdminSettingsPage() {
     capacity_policy: "UNCONFIGURED",
   });
 
+  const [initialData, setInitialData] = useState<typeof formData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,7 +32,7 @@ export default function AdminSettingsPage() {
     const token = "";
     api.getAdminSettings(token)
       .then((data) => {
-        setFormData({
+        const loadedData = {
           restaurant_name: data.restaurant_name || "",
           tagline: data.tagline || "",
           description: data.description || "",
@@ -44,7 +45,9 @@ export default function AdminSettingsPage() {
           business_day_cutoff: data.business_day_cutoff || "00:00:00",
           checkout_cutoff_margin_minutes: data.checkout_cutoff_margin_minutes ?? 5,
           capacity_policy: data.capacity_policy || "UNCONFIGURED",
-        });
+        };
+        setFormData(loadedData);
+        setInitialData(loadedData);
         setLoaded(true);
       })
       .catch((err) => setErrorMsg(err.message))
@@ -59,11 +62,13 @@ export default function AdminSettingsPage() {
 
     const token = "";
     try {
-      await api.updateAdminSettings(token, {
-        ...formData,
-        ticket_price_toman: Number(formData.ticket_price_toman),
-        checkout_cutoff_margin_minutes: Number(formData.checkout_cutoff_margin_minutes),
-      });
+      const normalized = { ...formData, ticket_price_toman: Number(formData.ticket_price_toman), checkout_cutoff_margin_minutes: Number(formData.checkout_cutoff_margin_minutes) };
+      const changes = Object.fromEntries(Object.entries(normalized).filter(([key, value]) => value !== initialData?.[key as keyof typeof normalized]));
+      if (Object.keys(changes).length) {
+        await api.updateAdminSettings(token, changes);
+        setFormData(normalized);
+        setInitialData(normalized);
+      }
       setSuccessMsg("تنظیمات با موفقیت ذخیره و اعمال شدند.");
     } catch (err: any) {
       setErrorMsg(err.message || "خطا در به‌روزرسانی تنظیمات.");
@@ -73,7 +78,7 @@ export default function AdminSettingsPage() {
   };
 
   if (loading) {
-    return <div className="py-20 text-center text-xs text-[#77756D]">در حال بارگذاری تنظیمات...</div>;
+    return <div className="py-20 text-center text-xs text-[#526A70]">در حال بارگذاری تنظیمات...</div>;
   }
 
   if (!loaded) {
@@ -83,22 +88,22 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold text-[#203D33]">تنظیمات رستوران و روز کاری</h1>
-        <p className="text-xs text-[#77756D] mt-1">
+        <h1 className="text-2xl font-bold text-[#246D7A]">تنظیمات رستوران و روز کاری</h1>
+        <p className="text-xs text-[#526A70] mt-1">
           پیکربندی هویت رستوران، نرخ بلیت، ساعت برش روز کاری و وضعیت فروش آنلاین
         </p>
       </div>
 
       {successMsg && (
-        <div className="p-4 rounded-2xl bg-[#203D33]/10 border border-[#203D33]/30 text-xs font-bold text-[#203D33] flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-[#203D33]" />
+        <div className="p-4 rounded-2xl bg-[#246D7A]/10 border border-[#246D7A]/30 text-xs font-bold text-[#246D7A] flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-[#246D7A]" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-[#A85E48]/10 border border-[#A85E48]/30 text-xs font-bold text-[#A85E48] flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-[#A85E48]" />
+        <div className="p-4 rounded-2xl bg-[#A9453A]/10 border border-[#A9453A]/30 text-xs font-bold text-[#A9453A] flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-[#A9453A]" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -106,14 +111,14 @@ export default function AdminSettingsPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         
         {/* Brand Information Section */}
-        <div className="bg-[#FFFCF6] rounded-3xl p-6 border border-[#E6DED1] shadow-xs space-y-4">
-          <h2 className="text-sm font-bold text-[#203D33] pb-2 border-b border-[#E6DED1]">
+        <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#DCE9E8] shadow-xs space-y-4">
+          <h2 className="text-sm font-bold text-[#246D7A] pb-2 border-b border-[#DCE9E8]">
             هویت و اطلاعات رستوران
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 نام رستوران
               </label>
               <input
@@ -121,36 +126,36 @@ export default function AdminSettingsPage() {
                 required
                 value={formData.restaurant_name}
                 onChange={(e) => setFormData({ ...formData, restaurant_name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 شعار / زیرعنوان
               </label>
               <input
                 type="text"
                 value={formData.tagline}
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 توضیحات کوتاه
               </label>
               <textarea
                 rows={2}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 شماره تماس رستوران
               </label>
               <input
@@ -159,33 +164,33 @@ export default function AdminSettingsPage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="021-..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 نشانی فیزیکی رستوران
               </label>
               <input
                 type="text"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
             </div>
           </div>
         </div>
 
         {/* Pricing & Business Day Policy */}
-        <div className="bg-[#FFFCF6] rounded-3xl p-6 border border-[#E6DED1] shadow-xs space-y-4">
-          <h2 className="text-sm font-bold text-[#203D33] pb-2 border-b border-[#E6DED1]">
+        <div className="bg-[#FFFFFF] rounded-3xl p-6 border border-[#DCE9E8] shadow-xs space-y-4">
+          <h2 className="text-sm font-bold text-[#246D7A] pb-2 border-b border-[#DCE9E8]">
             نرخ بلیت و تقویم کاری
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 قیمت هر بلیت ورودی (تومان)
               </label>
               <input
@@ -194,15 +199,15 @@ export default function AdminSettingsPage() {
                 min={1}
                 value={formData.ticket_price_toman}
                 onChange={(e) => setFormData({ ...formData, ticket_price_toman: Number(e.target.value) })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs font-bold text-[#203D33]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs font-bold text-[#246D7A]"
               />
-              <span className="text-[11px] text-[#77756D] mt-1 block">
+              <span className="text-[11px] text-[#526A70] mt-1 block">
                 معادل: {formatToman(Number(formData.ticket_price_toman))}
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 ساعت برش روز کاری (Cutoff Time)
               </label>
               <input
@@ -211,15 +216,15 @@ export default function AdminSettingsPage() {
                 required
                 value={formData.business_day_cutoff}
                 onChange={(e) => setFormData({ ...formData, business_day_cutoff: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
-              <span className="text-[11px] text-[#77756D] mt-1 block">
+              <span className="text-[11px] text-[#526A70] mt-1 block">
                 پیش‌فرض: 00:00:00 (نیمه‌شب). در صورت فعالیت شبانه می‌توان به عنوان مثال 04:00:00 تنظیم نمود.
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 فاصله توقف فروش پیش از برش روز (دقیقه)
               </label>
               <input
@@ -228,21 +233,21 @@ export default function AdminSettingsPage() {
                 max={60}
                 value={formData.checkout_cutoff_margin_minutes}
                 onChange={(e) => setFormData({ ...formData, checkout_cutoff_margin_minutes: Number(e.target.value) })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F0E7]/60 border border-[#E6DED1] text-xs text-[#262A25]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F3F8F7]/60 border border-[#DCE9E8] text-xs text-[#213F48]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#262A25] mb-1">
+              <label className="block text-xs font-semibold text-[#213F48] mb-1">
                 سیاست ظرفیت سالن
               </label>
               <input
                 type="text"
                 disabled
                 value="تنظیم نشده (UNCONFIGURED)"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6DED1]/50 border border-[#E6DED1] text-xs text-[#77756D] cursor-not-allowed"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#DCE9E8]/50 border border-[#DCE9E8] text-xs text-[#526A70] cursor-not-allowed"
               />
-              <span className="text-[11px] text-[#77756D] mt-1 block">
+              <span className="text-[11px] text-[#526A70] mt-1 block">
                 محدودیت ظرفیت تا زمان اعلام سیاست رسمی سالن (فروش روزانه یا اشغال همزمان) غیرفعال است.
               </span>
             </div>
@@ -254,9 +259,9 @@ export default function AdminSettingsPage() {
                 type="checkbox"
                 checked={formData.is_demo_price}
                 onChange={(e) => setFormData({ ...formData, is_demo_price: e.target.checked })}
-                className="w-4 h-4 rounded-sm text-[#203D33] accent-[#203D33]"
+                className="w-4 h-4 rounded-sm text-[#246D7A] accent-[#246D7A]"
               />
-              <span className="text-xs font-semibold text-[#262A25]">
+              <span className="text-xs font-semibold text-[#213F48]">
                 حالت قیمت آزمایشی فعال است (نمایش برچسب Demo به مشتریان)
               </span>
             </label>
@@ -266,9 +271,9 @@ export default function AdminSettingsPage() {
                 type="checkbox"
                 checked={formData.sales_enabled}
                 onChange={(e) => setFormData({ ...formData, sales_enabled: e.target.checked })}
-                className="w-4 h-4 rounded-sm text-[#203D33] accent-[#203D33]"
+                className="w-4 h-4 rounded-sm text-[#246D7A] accent-[#246D7A]"
               />
-              <span className="text-xs font-semibold text-[#262A25]">
+              <span className="text-xs font-semibold text-[#213F48]">
                 فروش آنلاین بلیت فعال است
               </span>
             </label>
@@ -280,9 +285,9 @@ export default function AdminSettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-3 rounded-2xl bg-[#203D33] text-[#FFFCF6] hover:bg-[#294D40] text-xs font-bold shadow-md flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-3 rounded-2xl bg-[#246D7A] text-[#FFFFFF] hover:bg-[#195560] text-xs font-bold shadow-md flex items-center gap-2 disabled:opacity-50"
           >
-            <Save className="w-4 h-4 text-[#C3A16A]" />
+            <Save className="w-4 h-4 text-[#C85D3D]" />
             <span>{saving ? "در حال ذخیره..." : "ذخیره تغییرات"}</span>
           </button>
         </div>

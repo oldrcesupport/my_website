@@ -44,3 +44,19 @@ def test_checkout_verification_and_session_scanner_flow():
     scan = lambda: staff.post("/api/v1/staff/check-in/", {"qr_token": tickets[0]["ticket_number"]}, content_type="application/json", HTTP_X_CSRFTOKEN=csrf)
     assert scan().json()["result"] == "SUCCESS"
     assert scan().json()["result"] == "ALREADY_USED"
+
+@pytest.mark.django_db
+@override_settings(PAYMENT_PROVIDER="mock", FRONTEND_URL="http://127.0.0.1:3000")
+def test_checkout_rejects_mismatched_origin_before_creating_order():
+    from apps.orders.models import Order
+
+    client = Client()
+    payload = {"purchaser_name": "Test Guest", "purchaser_phone": "09120000000", "quantity": 1}
+    response = client.post("/api/v1/orders/", payload, content_type="application/json", HTTP_ORIGIN="http://localhost:3000")
+    assert response.status_code == 400
+    assert not Order.objects.exists()
+    response = client.post("/api/v1/orders/", payload, content_type="application/json", HTTP_ORIGIN="http://127.0.0.1:3000")
+    assert response.status_code == 201
+    callback = client.get("/api/v1/payments/zarinpal/callback/", {"Authority": response.json()["payment_redirect_url"].rsplit("/", 1)[-1], "Status": "OK"})
+    assert callback["Location"].startswith("http://127.0.0.1:3000/payment/return?")
+    assert client.get(f"/api/v1/orders/{response.json()['order_public_id']}/status/").json()["status"] == "PAID"

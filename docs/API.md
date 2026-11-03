@@ -1,6 +1,6 @@
 # API reference
 
-Current as of 2026-11-02. See `backend/config/urls.py` and the serializers for
+Current as of 2026-11-03. See `backend/config/urls.py` and the serializers for
 the authoritative implementation. The generated OpenAPI schema has known
 inference warnings and is not a complete contract.
 
@@ -20,6 +20,8 @@ session requests, `GET /api/v1/auth/csrf/` and send the `csrftoken` value in
 | `GET /api/v1/orders/{public_id}/tickets/` | Owner or administrator only; returns individual passes, including `qr_payload` and `qr_data_uri`. |
 | `GET /api/v1/tickets/{public_id}/qr/` | Owner or administrator only; PNG. `.png` is also accepted. |
 | `GET /api/v1/payments/zarinpal/callback/` | Provider browser return with `Authority` and `Status`; server verification precedes issuance. |
+
+When supplied, checkout `Origin` must equal the configured `FRONTEND_URL` origin; a mismatch returns 400 before order creation. Callback redirects continue to use server configuration, never a request header.
 
 The order creation response contains `order_public_id`, `quantity`,
 `unit_price_toman`, `total_price_toman`, `currency_unit`, `business_date`,
